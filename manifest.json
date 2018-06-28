@@ -28,13 +28,12 @@
       "all_frames": true,
       "js": [
         "cs_modules/core.d_start.lib.js",
-        "cs_modules/core.d_start.RedirecionarPagina.js",
         "cs_modules/core.d_start.Theme.js",
         "cs_modules/core.d_start.js"
       ]
     },
     {
-      "matches": ["*://*.br/sei/controlador.php?acao=*", "*://*.br/sei/controlador_externo.php?acao=*"],
+      "matches": ["*://*.br/sei/*", "*://*.br/sei/*"],
       "run_at": "document_idle",
       "all_frames": true,
       "js": [
@@ -45,6 +44,8 @@
         "cs_modules/core.d_idle.VerificarBlocoAssinatura.js",
         "cs_modules/core.d_idle.IndicarConfiguracao.js",
         "cs_modules/core.d_idle.AtalhoPublicacoesEletronicas.js",
+        "cs_modules/core.d_idle.NovaTela.ControleGerencial.js",
+        "cs_modules/core.d_idle.NovaTela.js",
         "cs_modules/core.d_idle.js"
       ]
     },

@@ -25,6 +25,7 @@ if (ModuleInit(ModName_idle)) {
         break;
     }
   }, this);
+  NovaTela(ModName_idle);
 
   if (SavedOptions.InstallOrUpdate) IndicarConfiguracao(ModName_idle);
 }
