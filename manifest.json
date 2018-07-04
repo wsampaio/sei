@@ -22,7 +22,7 @@
 
   "content_scripts": [
     {
-      "matches": ["*://*.br/sei/*", "*://*.br/sip/*"],
+      "matches": ["*://*/sei/*", "*://*/sip/*"],
       "run_at": "document_start",
       "css": ["cs_modules/core.css"],
       "all_frames": true,
@@ -33,11 +33,19 @@
       ]
     },
     {
-      "matches": ["*://*.br/sei/*", "*://*.br/sei/*"],
+      "matches": ["*://*/sei/*", "*://*/sei/*"],
       "run_at": "document_idle",
+      "css": [
+        "lib/jquery-ui/jquery-ui.min.css",
+        "lib/jquery.tablesorter/theme.blue.min.css", "lib/jquery.tablesorter/theme.dark.min.css"
+      ],
       "all_frames": true,
       "js": [
         "lib/jquery-3.2.1.min.js",
+        "lib/jquery-ui/jquery-ui.min.js",
+        "lib/jquery.tablesorter/jquery.tablesorter.min.js", "lib/jquery.tablesorter/jquery.tablesorter.widgets.min.js",
+        "cs_modules/core.d_idle.Lib.WsSei.js",
+        "cs_modules/core.d_idle.Lib.ExtWsSei.js",
         "cs_modules/core.d_idle.PontoControleCores.js",
         "cs_modules/core.d_idle.AdicionarIdentificadorSeipp.js",
         "cs_modules/core.d_idle.MenuSuspenso.js",
@@ -50,7 +58,7 @@
       ]
     },
     {
-      "matches": ["*://*.br/sei/controlador.php?acao=documento_receber*"],
+      "matches": ["*://*/sei/controlador.php?acao=documento_receber*"],
       "all_frames": true,
       "js": [
         "cs_modules/documento_receber.ForcarReaberturaProcesso.js",
@@ -59,9 +67,8 @@
       ]
     },
     {
-      "matches": ["*://*.br/sei/controlador.php?acao=procedimento_controlar*"],
+      "matches": ["*://*/sei/controlador.php?acao=procedimento_controlar*"],
       "js": [
-        "lib/jquery.tablesorter.min.js", "lib/jquery.tablesorter.widgets.min.js",
         "cs_modules/procedimento_controlar.CorrigirTabelas.js",
         "cs_modules/procedimento_controlar.ConfirmarAntesConcluir.js",
         "cs_modules/procedimento_controlar.IncluirCalculoPrazos.js",
@@ -76,7 +83,7 @@
       ]
     },
     {
-      "matches": ["*://*.br/sei/controlador.php?acao=rel_bloco_protocolo_listar*"],
+      "matches": ["*://*/sei/controlador.php?acao=rel_bloco_protocolo_listar*"],
       "js": [
         "cs_modules/lib.filtra_processos.js",
         "cs_modules/lib.filtra_processos.PesquisarInformacoes.js",
@@ -86,7 +93,7 @@
       ]
     },
         {
-      "matches": ["*://*.br/sei/controlador.php?acao=controle_unidade_gerar*"],
+      "matches": ["*://*/sei/controlador.php?acao=controle_unidade_gerar*"],
       "js": [
         "cs_modules/lib.SelecionarMultiplosProcessos.js",
         "cs_modules/lib.RetirarSobrestamentoReabrirEmBloco.js",
@@ -94,7 +101,7 @@
       ]
     },
     {
-      "matches": ["*://*.br/sei/controlador.php?acao=procedimento_visualizar*"],
+      "matches": ["*://*/sei/controlador.php?acao=procedimento_visualizar*"],
       "all_frames": true,
       "css": ["cs_modules/procedimento_visualizar.css"],
       "js": [
@@ -108,7 +115,7 @@
       ]
     },
     {
-      "matches": ["*://*.br/sei/controlador.php?acao=arvore_visualizar*"],
+      "matches": ["*://*/sei/controlador.php?acao=arvore_visualizar*"],
       "all_frames": true,
       "js": [
         "cs_modules/arvore_visualizar.NovoDocumento.js",
@@ -116,7 +123,7 @@
       ]
     },
     {
-      "matches": ["*://*.br/sei/controlador.php?acao=anotacao_registrar*"],
+      "matches": ["*://*/sei/controlador.php?acao=anotacao_registrar*"],
       "all_frames": true,
       "js": [
         "cs_modules/anotacao_registrar.AtualizarAnotacaoNaArvore.js",
@@ -124,7 +131,7 @@
       ]
     },
     {
-      "matches": ["*://*.br/sei/controlador.php?acao=infra_configurar*"],
+      "matches": ["*://*/sei/controlador.php?acao=infra_configurar*"],
       "css": ["cs_modules/options_ui/options_ui.css"],
       "js": [
         "cs_modules/infra_configurar.Options_ui.js",
@@ -132,7 +139,7 @@
       ]
     },
     {
-      "matches": ["*://*.br/sei/controlador.php?acao=documento_gerar*"],
+      "matches": ["*://*/sei/controlador.php?acao=documento_gerar*"],
       "all_frames": true,
       "js": [
         "cs_modules/documento_gerar.AumentaTamanho.js",

@@ -51,10 +51,10 @@
 .tablesorter-default thead .sorter-false {
 	background-image: none;
 }
-.sorter-false > .tablesorter-header-inner {
+.tablesorter-default .sorter-false > .tablesorter-header-inner {
 	padding-left: 0;
 }
-.tablesorter-header-inner {
+.tablesorter-default .tablesorter-header-inner {
 	font-size: inherit;
 	font-weight: inherit;
 	text-align: inherit;
@@ -66,23 +66,27 @@
 	background-color: gray;
 }
 
-.tablesorter-headerAsc, .tablesorter-headerDesc {
+.tablesorter-default .tablesorter-headerAsc, .tablesorter-default .tablesorter-headerDesc {
     background-color: gray !important;
 }
 
-.tablesorter-filter {
+.tablesorter-default .tablesorter-filter {
   width: 100%;
   border: 1px solid #bbb;
 }
-.tablesorter-filter.disabled {
+.tablesorter-default .tablesorter-filter.disabled {
   display: none;
 }
-.tablesorter-filter-row.hideme {
+.tablesorter-default .tablesorter-filter-row.hideme {
   display: none !important;
 }
-.tablesorter-filter-row td {
+.tablesorter-default .tablesorter-filter-row td {
   border-left: 1px dotted darkgray;
   background-color: #dfdfdf;
+}
+
+.tablesorter-default caption {
+  background-color: transparent !important;
 }
 
 /* CSS for Tablesorter END */

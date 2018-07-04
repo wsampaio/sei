@@ -18,12 +18,6 @@ function Main(Options) {
   if (SavedOptions.theme != "white") {
     Theme(ModName_start, SavedOptions.Theme);
   }
-
-  if (window.location.href == GetBaseUrl()) {
-    setTimeout(function () {
-      RedirecionarPagina(ModName_start);
-    }, 500);
-  }
 }
 
 /******************************************************************************
