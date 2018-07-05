@@ -40,6 +40,8 @@ function ext_ws_get(apirest, params = null, id_url = null) {
         switch (apirest) {
           case ext_wsapi.processo.consultar_dados:
             return __ProcessoConsultarDados($html);
+          case ext_wsapi.processo.marcador:
+            return __ProcessoConsultarMarcador($html);
           default:
             throw new Error("Api não implementada");
         }
@@ -62,7 +64,7 @@ function __ProcessoConsultar(IdProcesso) {
       id: IdProcesso,
       Numero: -1,
       Flags: {
-        Restrito: false,
+        Restrito: null,
         PontoControle: null,
         Marcador: {
           Nome: null,
@@ -113,7 +115,9 @@ function __ProcessoConsultar(IdProcesso) {
       /** Pega as ações flags do processo */
       x = resp.indexOf('infraArvoreAcao("NIVEL_ACESSO'); /** ACESSO RESTRITO */
       if (x != -1) {
-        Processo.Flags.Restrito = true;
+        x = resp.indexOf("Acesso Restrito\\n", x) + 17;
+        y = resp.indexOf('"', x);
+        Processo.Flags.Restrito = resp.substring(x, y);
       }
       x = resp.indexOf('infraArvoreAcao("SITUACAO'); /** PONTO DE CONTROLE */
       if (x != -1) {
@@ -184,4 +188,40 @@ function __ProcessoConsultarDados($html) {
   });
 }
 
-
+function __ProcessoConsultarMarcador($html) {
+  return new Promise((resolve, reject) => {
+    var marcador = {
+      id: -1,
+      marcador: "",
+      data: null,
+      usuario: "",
+      texto: "",
+      cor: "",
+      historico: []
+    };
+    var $tabela = $("#tblHistorico tr[class='infraTrClara']", $html);
+    if ($tabela.length) {
+      $tabela.each(function () {
+        var historico = {
+          data: $("td:eq(0)", $(this)).text(),
+          usuario: $("td:eq(1)", $(this)).text(),
+          marcador: $("td:eq(2)", $(this)).text(),
+          texto: $("td:eq(3)", $(this)).text()
+        };
+        marcador.historico.push(historico);
+      });
+      var $optsel = $("#selMarcador option[selected]", $html);
+      marcador.id = $optsel.val();
+      marcador.marcador = $optsel.text();
+      marcador.data = marcador.historico[0].data;
+      marcador.usuario = marcador.historico[0].usuario;
+      marcador.texto = marcador.historico[0].texto;
+      marcador.cor = $optsel.attr("data-imagesrc");
+      marcador.cor = marcador.cor.substring(
+        marcador.cor.indexOf("_") + 1,
+        marcador.cor.indexOf(".png")
+      );
+    }
+    resolve(marcador);
+  });
+}

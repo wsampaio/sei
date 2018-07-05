@@ -26,7 +26,9 @@ function ControleGerencial() {
           /** Pega informações extras */
           return ext_ws_get(ext_wsapi.processo.consultar, null, processo.atributos.idProcedimento).then(function (proc) {
             return ext_ws_get(ext_wsapi.processo.consultar_dados, proc).then(function (dados) {
-              return Promise.resolve({ processo: proc, dados: dados });
+              return ext_ws_get(ext_wsapi.processo.marcador, proc).then(function (mardador) {
+                return Promise.resolve({ processo: proc, dados: dados, marcador: mardador });
+              });
             });
           });
         }).then(function (DadosExtras) {
@@ -51,7 +53,7 @@ function ControleGerencial() {
           },
           3: function (node, table, cellIndex) {
             var texto = $(node).text();
-            return texto.indexOf("vermelho") != -1 ? 0: texto.indexOf("amarelo") != -1 ? 2: texto.indexOf("verde") != -1 ? 3: texto.indexOf("roxo") != -1 ? 4: 99;
+            return texto.indexOf("vermelho") != -1 ? 0 : texto.indexOf("amarelo") != -1 ? 2 : texto.indexOf("verde") != -1 ? 3 : texto.indexOf("roxo") != -1 ? 4 : 99;
           }
         }
       });
@@ -94,6 +96,7 @@ function ControleGerencial() {
       $trrow.append(
         $("<td/>")
           .append($("<div/>")
+            .attr("id", "proc" + processo.atributos.idProcedimento)
             .attr("title", processo.atributos.tipoProcesso)
             .append($("<a/>")
               .attr("href", "controlador.php?acao=procedimento_trabalhar&id_procedimento=" + processo.id)
@@ -101,6 +104,24 @@ function ControleGerencial() {
               .text(processo.atributos.numero)))
           .append($("<div/>").text(DadosExtras.dados.Observacao))
       );
+      if (DadosExtras.processo.Flags.Restrito != null) {
+        $("div[id^='proc']", $trrow).append($("<img/>")
+          .attr("src", "imagens/sei_chave_restrito.gif")
+          .attr("title", DadosExtras.processo.Flags.Restrito)
+        );
+      }
+      if (DadosExtras.processo.Flags.PontoControle != null) {
+        $("div[id^='proc']", $trrow).append($("<img/>")
+          .attr("src", "imagens/sei_situacao_pequeno.png")
+          .attr("title", DadosExtras.processo.Flags.PontoControle)
+        );
+      }
+      if (DadosExtras.processo.Flags.Marcador.Nome != null) {
+        $("div[id^='proc']", $trrow).append($("<img/>")
+          .attr("src", "imagens/marcador_" + DadosExtras.processo.Flags.Marcador.Cor + ".png")
+          .attr("title", DadosExtras.processo.Flags.Marcador.Nome)
+        );
+      }
       /** (HIDE)Tipo de processo */
       $trrow.append($("<td/>").text(processo.atributos.tipoProcesso).addClass("columnHide"));
 
@@ -112,8 +133,10 @@ function ControleGerencial() {
       }
 
       /** (Marcador) Despacho da autoridade / ???? não está implementado no wssei */
-      $trrow.append($("<td/>").text(DadosExtras.processo.Flags.Marcador.Nome + " - " + DadosExtras.processo.Flags.Marcador.Cor));
-      console.log(DadosExtras.processo);
+      $trrow.append($("<td/>")
+        .append($("<div/>").text(DadosExtras.marcador.marcador))
+        .append($("<div/>").text(DadosExtras.marcador.texto))
+      );
       /** Acompanhamento Especial */
       $trrow.append($("<td/>").text("asdkfjsd lf sflsdf ls"));
 
