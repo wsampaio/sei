@@ -8,34 +8,13 @@ function ControleGerencial() {
   data.MenuAcao = function (mconsole) {
     mconsole.log("Criando nova tela de controle gerencial...");
     var IdTabela = "TabelaGR";
+    var $tabela = null;
 
     /** Título da nova tela */
     $("#divInfraBarraLocalizacao").text("Controle Gerencial de processos");
     $("#divInfraAreaDados").removeAttr("style").append('<img id="imgAguarde" src="/infra_css/imagens/aguarde.gif" />');
 
-    /** Criar o html da tabela de processos */
-    var $tabela = $("<table/>").attr("id", IdTabela).addClass("tablesorter").append("<thead/>").append("<tbody/>");
-    var $tbody = $("tbody", $tabela);
-    var $thead = $("thead", $tabela);
-    /** Cabeçalho da tabela */
-    var $throw = $("<tr/>");
-    $throw.append($("<th/>").text("Processo"));
-    $throw.append($("<th/>").text("Sugestão de encaminhamento").attr("style", "width: 10px; white-space: nowrap;"));
-    $throw.append($("<th/>").text("Despacho da autoridade").attr("style", "width: 10px; white-space: nowrap;"));
-    $throw.append($("<th/>").text("Acompanhamento").attr("style", "width: 10px; white-space: nowrap;"));
-    $throw.append($("<th/>").text("Ações").attr("style", "width: 10px;"));
-    $thead.append($throw);
-
-    /** Teste de dados */
-    // for (let index = 0; index < 10; index++) {
-    //   $throw = $("<tr/>");
-    //   $throw.append($("<td/>").text("53500.000012/2018-35"));
-    //   $throw.append($("<td/>").text("Encaminha processo dxfskdlf sadlf jsldkfj saldkfj sadlfj sdalkfj sdlkf jasdlkf"));
-    //   $throw.append($("<td/>").text("sdafksdlf lsadfkj lsadfkj lksad fjlksdf jslakdf jsdaklf jsdal"));
-    //   $throw.append($("<td/>").text(" asdkfjsd lf sflsdf ls"));
-    //   $throw.append($("<td/>").text("X"));
-    //   $tbody.append($throw);
-    // }
+    TabelaCriar();
 
     /** Recuperar os dados dos processos pelo wssei */
     var dataprocessos = [];
@@ -45,91 +24,103 @@ function ControleGerencial() {
       return dataprocessos.reduce(function (sequence, processo) {
         return sequence.then(function () {
           /** Pega informações extras */
-          return ext_ws_get(ext_wsapi.processo.consultar, null, processo.atributos.idProcedimento);
-        }).then(function (processo2) {
-          /** Inclui os dados na tabela */
-          $throw = $("<tr/>");
-          /** Processo / ??? Observação da unidade não está implementado no wssei */
-          $throw.append(
-            $("<td/>")
-              .append($("<a/>")
-                .attr("href", "controlador.php?acao=procedimento_trabalhar&id_procedimento=" + processo.id)
-                .attr("target", "_blank")
-                .text(processo.atributos.numero))
-              .append($("<div/>").text(processo2.Observacao))
-          );
-
-          /** (Anotação) Sugestão de encaminhamento */
-          if (processo.atributos.anotacoes.length > 0) {
-            $throw.append($("<td/>").text(processo.atributos.anotacoes[0].descricao).css(processo.atributos.anotacoes[0].sinPrioridade == "S" ? { backgroundColor: "red" } : { backgroundColor: "yellow" }));
-          } else {
-            $throw.append($("<td/>"));
-          }
-
-          /** (Marcador) Despacho da autoridade */
-          $throw.append($("<td/>").text("sdafksdlf lsadfkj lsadfkj lksad fjlksdf jslakdf jsdaklf jsdal"));
-
-          /** Acompanhamento Especial */
-          $throw.append($("<td/>").text(" asdkfjsd lf sflsdf ls"));
-
-          /** Açoes */
-          $throw.append($("<td/>").text("X"));
-          $tbody.append($throw);
+          return ext_ws_get(ext_wsapi.processo.consultar, null, processo.atributos.idProcedimento).then(function (proc) {
+            return ext_ws_get(ext_wsapi.processo.consultar_dados, proc).then(function (dados) {
+              return Promise.resolve({ processo: proc, dados: dados });
+            });
+          });
+        }).then(function (DadosExtras) {
+          TabelaAdicinarProcesso(processo, DadosExtras);
         });
       }, Promise.resolve());
-      // dataprocessos.forEach(function (processo) {
-      //   $throw = $("<tr/>");
-      //   /** Processo / ??? Observação da unidade não está implementado no wssei */
-      //   $throw.append(
-      //     $("<td/>")
-      //       .append($("<a/>")
-      //       .attr("href", "controlador.php?acao=procedimento_trabalhar&id_procedimento=" + processo.id)
-      //       .attr("target", "_blank")
-      //       .text(processo.atributos.numero))
-      //       .append($("<div/>").text(processo.atributos.descricao))
-      //   );
-
-      //   /** (Anotação) Sugestão de encaminhamento */
-      //   if (processo.atributos.anotacoes.length > 0) {
-      //     $throw.append($("<td/>").text(processo.atributos.anotacoes[0].descricao).css(processo.atributos.anotacoes[0].sinPrioridade == "S" ? {backgroundColor: "red"} : {backgroundColor: "yellow"} ));
-      //   } else {
-      //     $throw.append($("<td/>"));
-      //   }
-
-      //   /** (Marcador) Despacho da autoridade */
-      //   $throw.append($("<td/>").text("sdafksdlf lsadfkj lsadfkj lksad fjlksdf jslakdf jsdaklf jsdal"));
-
-      //   /** Acompanhamento Especial */
-      //   $throw.append($("<td/>").text(" asdkfjsd lf sflsdf ls"));
-
-      //   /** Açoes */
-      //   $throw.append($("<td/>").text("X"));
-      //   $tbody.append($throw);
-      // })
     }).catch(console.error).then(function () {
       /** Adicioan a tabela na tela do sei */
       $tabela.appendTo("#divInfraAreaDados");
       $("#imgAguarde").remove();
 
       /** Aplica o tablesorter */
-      $("#" + IdTabela).tablesorter({
+      $tabela.tablesorter({
         theme: 'blue',
         headers: {
-          4: { sorter: false, filter: false }
+          5: { sorter: false, filter: false }
         },
-        widgets: ["zebra"]
+        widgets: ["zebra"],
+        textExtraction: {
+          0: function (node, table, cellIndex) {
+            return $("div[title]:first", node).text();
+          },
+          3: function (node, table, cellIndex) {
+            var texto = $(node).text();
+            return texto.indexOf("vermelho") != -1 ? 0: texto.indexOf("amarelo") != -1 ? 2: texto.indexOf("verde") != -1 ? 3: texto.indexOf("roxo") != -1 ? 4: 99;
+          }
+        }
       });
 
       /** Atualiza a tabela */
       //https://mottie.github.io/tablesorter/docs/example-empty-table.html
-      $("#" + IdTabela).trigger("update");
+      $tabela.trigger("update");
 
       ws_get(wsapi.documento.listar, "", 3).then(function (json) {
         console.log(json)
       }).catch(console.error);
     });
 
-    /** FIM */
+    /**  */
+    function TabelaCriar() {
+      /** Criar o html da tabela de processos */
+      $tabela = $("<table/>").attr("id", IdTabela).addClass("tablesorter").append("<thead/>").append("<tbody/>");
+      var $thead = $("thead", $tabela);
+      /** Cabeçalho da tabela */
+      var $throw = $("<tr/>");
+      $throw.append($("<th/>").text("Processo"));
+      $throw.append($("<th/>").text("tipo").addClass("columnHide"));
+      $throw.append($("<th/>").text("Sugestão de encaminhamento").attr("style", "width: 10px; white-space: nowrap;"));
+      $throw.append($("<th/>").text("Despacho da autoridade").attr("style", "width: 10px; white-space: nowrap;"));
+      $throw.append($("<th/>").text("Acompanhamento").attr("style", "width: 10px; white-space: nowrap;"));
+      $throw.append($("<th/>").text("Ações").attr("style", "width: 10px;"));
+      $thead.append($throw);
+    }
+
+    /**
+     *
+     * @param {ws_ProcessoListar} processo
+     * @param {*} DadosExtras
+     */
+    function TabelaAdicinarProcesso(processo, DadosExtras) {
+      var $tbody = $("tbody", $tabela);
+      /** Inclui os dados na tabela */
+      var $trrow = $("<tr/>");
+      /** Processo / Observação da unidade */
+      $trrow.append(
+        $("<td/>")
+          .append($("<div/>")
+            .attr("title", processo.atributos.tipoProcesso)
+            .append($("<a/>")
+              .attr("href", "controlador.php?acao=procedimento_trabalhar&id_procedimento=" + processo.id)
+              .attr("target", "_blank")
+              .text(processo.atributos.numero)))
+          .append($("<div/>").text(DadosExtras.dados.Observacao))
+      );
+      /** (HIDE)Tipo de processo */
+      $trrow.append($("<td/>").text(processo.atributos.tipoProcesso).addClass("columnHide"));
+
+      /** (Anotação) Sugestão de encaminhamento */
+      if (processo.atributos.anotacoes.length > 0) {
+        $trrow.append($("<td/>").text(processo.atributos.anotacoes[0].descricao).css(processo.atributos.anotacoes[0].sinPrioridade == "S" ? { backgroundColor: "red" } : { backgroundColor: "yellow" }));
+      } else {
+        $trrow.append($("<td/>"));
+      }
+
+      /** (Marcador) Despacho da autoridade / ???? não está implementado no wssei */
+      $trrow.append($("<td/>").text(DadosExtras.processo.Flags.Marcador.Nome + " - " + DadosExtras.processo.Flags.Marcador.Cor));
+      console.log(DadosExtras.processo);
+      /** Acompanhamento Especial */
+      $trrow.append($("<td/>").text("asdkfjsd lf sflsdf ls"));
+
+      /** Açoes */
+      $trrow.append($("<td/>").text("X"));
+      $tbody.append($trrow);
+    }
   };
 
   return data;

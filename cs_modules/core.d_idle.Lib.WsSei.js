@@ -77,6 +77,82 @@ var wsapi = {
   observacao: "/observacao/"
 };
 
+var ws_ProcessoListar = {
+  id: 0,
+  status: "string",
+  seiNumMaxDocsPasta: 0,
+  atributos: {
+    idProcedimento: 0,
+    idProtocolo: 0,
+    numero: "string",
+    tipoProcesso: "string",
+    descricao: "string",
+    usuarioAtribuido: "string",
+    unidade: {
+      idUnidade: 0,
+      sigla: "string"
+    },
+    dadosAbertura: [
+      {
+        info: "string",
+        lista: [
+          {
+            id: 0,
+            nome: "string"
+          }
+        ],
+        unidades: [
+          {
+            id: 0,
+            nome: "string"
+          }
+        ]
+      }
+    ],
+    anotacoes: [
+      {
+        idAnotacao: 0,
+        idProtocolo: 0,
+        descricao: "string",
+        idUnidade: 0,
+        idUsuario: 0,
+        dthAnotacao: "string",
+        sinPrioridade: "string",
+        staAnotacao: "string"
+      }
+    ],
+    status: {
+      documentoSigiloso: "string",
+      documentoRestrito: "string",
+      documentoNovo: "string",
+      documentoPublicado: "string",
+      anotacao: "string",
+      anotacaoPrioridade: "string",
+      ciencia: "string",
+      retornoProgramado: "string",
+      retornoData: {
+        dataProgramada: "string",
+        unidade: "string"
+      },
+      retornoAtrasado: "string",
+      processoAcessadoUsuario: "string",
+      processoAcessadoUnidade: "string",
+      processoRemocaoSobrestamento: "string",
+      processoBloqueado: "string",
+      processoDocumentoIncluidoAssinado: "string",
+      processoPublicado: "string",
+      nivelAcessoGlobal: "string",
+      podeGerenciarCredenciais: "string",
+      processoAberto: "string",
+      processoEmTramitacao: "string",
+      processoSobrestado: "string",
+      processoAnexado: "string",
+      podeReabrirProcesso: "string",
+      podeRegistrarAnotacao: "string"
+    }
+  }
+}
+
 /**
  * Exibe a janela de login, retorna json.
  */
@@ -126,7 +202,7 @@ function ws_login() {
 
 function ws_autenticar(Atualizar = false) {
   return browser.storage.local.get({ wsseilogin: null }).then(function (Login) {
-    console.log("Token: " + Login.wsseilogin.token);
+    //console.log("Token: " + Login.wsseilogin.token);
     if (Login.wsseilogin == null || Atualizar == true) {
       return ws_login().then(function (data) {
         return fetch(GetBaseUrl() + modwsapi + wsapi.autenticar, { body: JSON.stringify(data), headers: { 'content-type': 'application/json' }, method: 'POST' });
