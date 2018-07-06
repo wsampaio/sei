@@ -2,9 +2,10 @@
  * Usando o múdulo de webservice do sei:
  * https://softwarepublico.gov.br/gitlab/sei/mod-wssei
  */
-
-var modwsapi = "modulos/wssei/controlador_ws.php/api/v1";
-var wsapi = {
+const wsapiname = "WebService_App: ";
+const modwsapi = "modulos/wssei/controlador_ws.php/api/v1";
+const __storageName = 'wssei_' + window.location.hostname;
+const wsapi = {
   autenticar: "/autenticar",
   orgao: {
     listar: "/orgao/listar"
@@ -156,7 +157,7 @@ var ws_ProcessoListar = {
 /**
  * Exibe a janela de login, retorna json.
  */
-function ws_login() {
+function ws_loginGui() {
   return new Promise(function (resolve, reject) {
     var id_dialog = "#dialog-form";
     var cancelado = true;
@@ -191,8 +192,8 @@ function ws_login() {
       },
       close: function () {
         console.log("wsapi: Close");
-        $(id_dialog).remove();
         if (cancelado) reject(Error("Não autenticado"));
+        $(id_dialog).remove();
       }
     });
 
@@ -200,30 +201,32 @@ function ws_login() {
   });
 }
 
-function ws_autenticar(Atualizar = false) {
-  return browser.storage.local.get({ wsseilogin: null }).then(function (Login) {
-    //console.log("Token: " + Login.wsseilogin.token);
-    if (Login.wsseilogin == null || Atualizar == true) {
-      return ws_login().then(function (data) {
-        return fetch(GetBaseUrl() + modwsapi + wsapi.autenticar, { body: JSON.stringify(data), headers: { 'content-type': 'application/json' }, method: 'POST' });
-      }).then(response => response.json()).then(function (json) {
-        console.log(json);
-        return browser.storage.local.set({ wsseilogin: json.data }).then(() => json.data);
-      }).catch(function (err) {
-        console.log(err);
-        return Promise.reject(err);
-      });
+function ws_autenticar() {
+  return ws_loginGui().then(data => {
+    console.log(wsapiname + wspai.autenticar);
+    return fetch(GetBaseUrl() + modwsapi + wsapi.autenticar, { body: JSON.stringify(data), headers: { 'content-type': 'application/json' }, method: 'POST' });
+  }).then(response => response.json()).then(json => {
+    return browser.storage.local.set(JSON.parse('{"' + __storageName + '": ' + JSON.stringify(json.data) + "}")).then(() => json.data);
+  });
+}
+
+function ws_token(Validar = false) {
+  return browser.storage.local.get(JSON.parse('{"' + __storageName + '": null }')).then(storageLogin => {
+    var Login = Object.getOwnPropertyDescriptor(storageLogin, __storageName).value;
+    if (Login == null) {
+      throw new Error("Sessao não salva: Login nulo.");
     } else {
-      return Promise.resolve(Login.wsseilogin);
+      if (Validar) {
+        return ws_get(wsapi.usuario.unidades, "usuario=" + Login.loginData.IdUsuario).then(() => Login);
+      }
+      return Login;
     }
-  }).catch(function (err) {
-    console.log(err);
-    return Promise.reject(err);
   });
 }
 
 function ws_post(apirest, json_data) {
-  return ws_autenticar().then(function (Login) {
+  return ws_token().then(function (Login) {
+    console.log(wsapiname + apirest);
     return fetch(GetBaseUrl() + modwsapi + apirest, {
       body: JSON.stringify(json_data),
       headers: { 'content-type': 'application/json', 'token': Login.token },
@@ -233,10 +236,6 @@ function ws_post(apirest, json_data) {
     console.log(json);
     if (json.sucesso) {
       if (json.data == undefined) { return []; } else { return json.data; }
-    } else if (json.mensagem == "Token inválido!") {
-      /** Atualiza o token e execulta a função novamente */
-      console.log("Atualizar o token....");
-      return ws_autenticar(true).then(() => ws_get(apirest, json_data));
     } else {
       console.log(json);
       return Promise.reject(Error(json.mensagem));
@@ -248,15 +247,15 @@ function ws_post(apirest, json_data) {
 
 function ws_get(apirest, params, id_url = null) {
   var urlapi = GetBaseUrl() + modwsapi + apirest + (params != null ? "?" + params : "");
-  var TemId = urlapi.indexOf("{") != -1
-  if (TemId) {
+  if (urlapi.indexOf("{") != -1) {
     if (id_url != null) {
       urlapi = urlapi.replace(/\{\w+\}/g, id_url);
     } else {
       return Promise.reject("Necessário informar o id: " + urlapi.match(/\{\w+\}/g));
     }
   }
-  return ws_autenticar().then(function (Login) {
+  return ws_token().then(function (Login) {
+    console.log(wsapiname + apirest);
     return fetch(urlapi, {
       headers: { 'content-type': 'application/json', 'token': Login.token },
       method: 'GET'
@@ -265,15 +264,9 @@ function ws_get(apirest, params, id_url = null) {
     console.log(json);
     if (json.sucesso) {
       if (json.data == undefined) { return []; } else { return json.data; }
-    } else if (json.mensagem == "Token inválido!") {
-      /** Atualiza o token e execulta a função novamente */
-      console.log("Atualizar o token....");
-      return ws_autenticar(true).then(() => ws_get(apirest, params, id_url));
     } else {
       console.log(json);
       return Promise.reject(Error(json.mensagem));
     }
-  }).catch(function (err) {
-    return Promise.reject(err);
   });
 }

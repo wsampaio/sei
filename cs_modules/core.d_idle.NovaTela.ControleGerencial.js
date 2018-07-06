@@ -18,7 +18,10 @@ function ControleGerencial() {
 
     /** Recuperar os dados dos processos pelo wssei */
     var dataprocessos = [];
-    Promise.all([ws_get(wsapi.processo.listar, "tipo=R"), ws_get(wsapi.processo.listar, "tipo=G")]).then(jsons => {
+    ws_token(true).catch(err => {
+      console.log(err);
+      return ws_autenticar();
+    }).then(() => Promise.all([ws_get(wsapi.processo.listar, "tipo=R"), ws_get(wsapi.processo.listar, "tipo=G")])).then(jsons => {
       jsons.forEach((json) => dataprocessos = dataprocessos.concat(json));
       console.log(dataprocessos);
       return dataprocessos.reduce(function (sequence, processo) {
@@ -35,7 +38,7 @@ function ControleGerencial() {
           TabelaAdicinarProcesso(processo, DadosExtras);
         });
       }, Promise.resolve());
-    }).catch(console.error).then(function () {
+    }).then(function () {
       /** Adicioan a tabela na tela do sei */
       $tabela.appendTo("#divInfraAreaDados");
       $("#imgAguarde").remove();
@@ -65,6 +68,10 @@ function ControleGerencial() {
       ws_get(wsapi.documento.listar, "", 3).then(function (json) {
         console.log(json)
       }).catch(console.error);
+    }).catch(erro => {
+      console.log(erro);
+      $("#imgAguarde").remove();
+      $("#divInfraAreaDados").append(erro);
     });
 
     /**  */

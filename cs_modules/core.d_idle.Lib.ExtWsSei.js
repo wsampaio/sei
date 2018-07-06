@@ -2,7 +2,7 @@
  * Métodos não suportados no múdulo de webservice do sei:
  * core.d_idle.Lib.WsSei.js
  */
-
+const ext_wsapiname = "WebService_Sei++: ";
 var ext_wsapi = {
   processo: {
     consultar: "__ProcessoConsultar",
@@ -25,6 +25,7 @@ function ext_ws_get(apirest, params = null, id_url = null) {
           if (cur.indexOf(apirest) != -1) acc = cur;
           return acc;
         });
+        console.log(ext_wsapiname + apirest);
         return fetch(comando, { method: 'GET' });
       }).then(function (response) {
         var contentType = response.headers.get("content-type");
@@ -75,6 +76,7 @@ function __ProcessoConsultar(IdProcesso) {
     };
 
     if (IdProcesso == null) reject("IdProcesso não informado");
+    console.log(ext_wsapiname + ext_wsapi.processo.consultar + " [1]");
     fetch(url, { method: 'GET' }).then(function (response) {
       var contentType = response.headers.get("content-type");
       if (response.ok) {
@@ -89,6 +91,7 @@ function __ProcessoConsultar(IdProcesso) {
       var linkArvore = $("#ifrArvore", $html).attr("src");
       if (linkArvore == undefined) throw new Error("Link da arvore não encontrado!");
       linkArvore = GetBaseUrl() + linkArvore;
+      console.log(ext_wsapiname + ext_wsapi.processo.consultar + " [2]");
       return fetch(linkArvore, { method: 'GET' }).then(function (response) {
         var contentType = response.headers.get("content-type");
         if (response.ok) {
