@@ -1,0 +1,9 @@
+.columnHide{
+  display: none;
+}
+
+.columnNowrap {
+  width: 10px;
+  white-space: nowrap;
+}
+

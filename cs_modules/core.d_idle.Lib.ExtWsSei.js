@@ -8,6 +8,9 @@ var ext_wsapi = {
     consultar: "__ProcessoConsultar",
     consultar_dados: "procedimento_alterar",
     marcador: "andamento_marcador_gerenciar"
+  },
+  marcador: {
+    listar: "marcador_listar"
   }
 }
 
@@ -16,53 +19,76 @@ function ext_ws_post(apirest, json_data) {
 }
 
 function ext_ws_get(apirest, params = null, id_url = null) {
-  if (apirest == ext_wsapi.processo.consultar) {
-    return __ProcessoConsultar(id_url);
-  } else if (params != null) {
-    if (params.__tipo != null) {
-      return Promise.resolve(params.LinkComandos).then(function (comandos) {
-        var comando = comandos.reduce((acc, cur, i) => {
-          if (cur.indexOf(apirest) != -1) acc = cur;
-          return acc;
-        });
-        console.log(ext_wsapiname + apirest);
-        return fetch(comando, { method: 'GET' });
-      }).then(function (response) {
-        var contentType = response.headers.get("content-type");
-        if (response.ok) {
-          if (contentType && contentType.includes("text/html")) {
-            return response.arrayBuffer().then(buf => new TextDecoder('ISO-8859-1').decode(buf));
-          } else { console.log(contentType); throw new Error("Erro no Content Type esperado!"); }
-        } else {
-          throw new Error(response.statusText + ": " + response.status);
+  return Promise.resolve().then(() => {
+    var link = "";
+    if (__isInGroup(ext_wsapi, apirest)) {
+      if (__isInGroup(ext_wsapi.processo, apirest)) {
+        if (apirest == ext_wsapi.processo.consultar) {
+          if (params != null && params != "") {
+            link = params;
+          } else if (id_url != null) {
+            link = GetBaseUrl() + "controlador.php?acao=procedimento_trabalhar&id_procedimento=" + id_url;
+          } else {
+            throw new Error("IdProcesso não informado");
+          }
+        } else {/** Pega o link do comando */
+          link = params.LinkComandos.reduce((acc, cur, i) => {
+            if (cur.indexOf(apirest) != -1) acc = cur;
+            return acc;
+          });
         }
-      }).then(function (resp) {
-        var $html = $($.parseHTML(resp));
-        switch (apirest) {
-          case ext_wsapi.processo.consultar_dados:
-            return __ProcessoConsultarDados($html);
-          case ext_wsapi.processo.marcador:
-            return __ProcessoConsultarMarcador($html);
-          default:
-            throw new Error("Api não implementada");
-        }
-      });
+      } else { /** comandos do menu */
+        link = $("#main-menu li a[href^='controlador.php?acao='" + apirest + "']");
+      }
+    } else {
+      throw new Error("Api não implementada: " + apirest);
     }
-  } else {
-    return Promise.reject("ext_ws_get: Parametros inválidos");
+    /** Execulta a consulta */
+    console.log(ext_wsapiname + "GET " + apirest + " > " + link);
+    return fetch(link, { method: 'GET' });
+  }).then(function (response) {
+    var contentType = response.headers.get("content-type");
+    if (response.ok) {
+      if (contentType && contentType.includes("text/html")) {
+        return response.arrayBuffer().then(buf => new TextDecoder('ISO-8859-1').decode(buf));
+      } else { console.log(contentType); throw new Error("Erro no Content Type esperado!"); }
+    } else {
+      throw new Error(response.statusText + ": " + response.status);
+    }
+  }).then(function (resp) {
+    switch (apirest) {
+      case ext_wsapi.processo.consultar:
+        return __ProcessoConsultar(resp);
+      case ext_wsapi.processo.consultar_dados:
+        return __ProcessoConsultarDados(resp);
+      case ext_wsapi.processo.marcador:
+        return __ProcessoConsultarMarcador(resp);
+      case ext_wsapi.marcador.listar:
+        return __MarcadorListar(resp);
+      default:
+        throw new Error("Api não implementada");
+    }
+  });
+}
+
+function __isInGroup(group, value) {
+  for (const iterator in group) {
+    if (typeof group[iterator] == "object") return __isInGroup(group[iterator], value);
+    if (group[iterator] == value) return true;
   }
+  return false;
 }
 
 /**
  * Retorna JSON com os dados e comandos do processo.
- * @param {number} IdProcesso
+ * @param {*} resp
  */
-function __ProcessoConsultar(IdProcesso) {
+function __ProcessoConsultar(resp) {
   return new Promise((resolve, reject) => {
-    var url = GetBaseUrl() + "controlador.php?acao=procedimento_trabalhar&id_procedimento=" + IdProcesso;
+    var $html = $($.parseHTML(resp));
     var Processo = {
       __tipo: "processo",
-      id: IdProcesso,
+      id: -1,
       Numero: -1,
       Flags: {
         Restrito: null,
@@ -75,40 +101,17 @@ function __ProcessoConsultar(IdProcesso) {
       LinkComandos: [],
     };
 
-    if (IdProcesso == null) reject("IdProcesso não informado");
-    console.log(ext_wsapiname + ext_wsapi.processo.consultar + " [1]");
-    fetch(url, { method: 'GET' }).then(function (response) {
-      var contentType = response.headers.get("content-type");
-      if (response.ok) {
-        if (contentType && contentType.includes("text/html")) {
-          return response.arrayBuffer().then(buf => new TextDecoder('ISO-8859-1').decode(buf));
-        } else { console.log(contentType); throw new Error("Erro no Content Type esperado!"); }
-      } else {
-        throw new Error(response.statusText + ": " + response.status);
-      }
-    }).then(function (resp) {
-      var $html = $($.parseHTML(resp));
-      var linkArvore = $("#ifrArvore", $html).attr("src");
-      if (linkArvore == undefined) throw new Error("Link da arvore não encontrado!");
+    var linkArvore = $("#ifrArvore", $html).attr("src");
+    if (linkArvore != undefined) {
       linkArvore = GetBaseUrl() + linkArvore;
-      console.log(ext_wsapiname + ext_wsapi.processo.consultar + " [2]");
-      return fetch(linkArvore, { method: 'GET' }).then(function (response) {
-        var contentType = response.headers.get("content-type");
-        if (response.ok) {
-          if (contentType && contentType.includes("text/html")) {
-            return response.arrayBuffer().then(buf => new TextDecoder('ISO-8859-1').decode(buf));
-          } else { console.log(contentType); throw new Error("Erro no Content Type esperado!"); }
-        } else {
-          throw new Error(response.statusText + ": " + response.status);
-        }
-      });
-    }).then(function (resp) {
+      resolve(ext_ws_get(ext_wsapi.processo.consultar, linkArvore));
+    } else {
       /** Pega os links dos camandos do processo */
       var x = resp.indexOf("Nos[0].acoes");
       x = resp.indexOf("'", x) + 1;
       var y = resp.indexOf("Nos[0]", x) - 3;
-      var $html = $($.parseHTML(resp.substring(x, y)));
-      $html.each(function (i, tag) {
+      var $html2 = $($.parseHTML(resp.substring(x, y)));
+      $html2.each(function (i, tag) {
         var href = $(tag).attr("href");
         if (href != "#") Processo.LinkComandos.push(GetBaseUrl() + href);
       });
@@ -143,8 +146,14 @@ function __ProcessoConsultar(IdProcesso) {
       y = resp.indexOf('"', x);
       Processo.Numero = resp.substring(x, y);
 
+      /** Pega o id do processo */
+      x = resp.indexOf("id_procedimento=");
+      x = resp.indexOf('=', x) + 1;
+      y = resp.indexOf('&', x);
+      Processo.id = resp.substring(x, y);
+
       resolve(Processo);
-    }).catch(reject);
+    }
   });
 }
 
@@ -152,8 +161,9 @@ function __ProcessoConsultar(IdProcesso) {
  * Consulta os dados do processo (Tela alterar processo)
  * @param {*} $html
  */
-function __ProcessoConsultarDados($html) {
+function __ProcessoConsultarDados(resp) {
   return new Promise((resolve, reject) => {
+    var $html = $($.parseHTML(resp));
     var DadosProcesso = {
       IdProcedimento: -1,
       ProtocoloProcedimentoFormatado: "",
@@ -191,8 +201,9 @@ function __ProcessoConsultarDados($html) {
   });
 }
 
-function __ProcessoConsultarMarcador($html) {
+function __ProcessoConsultarMarcador(resp) {
   return new Promise((resolve, reject) => {
+    var $html = $($.parseHTML(resp));
     var marcador = {
       id: -1,
       marcador: "",
@@ -226,5 +237,30 @@ function __ProcessoConsultarMarcador($html) {
       );
     }
     resolve(marcador);
+  });
+}
+
+function __MarcadorListar(resp) {
+  return new new Promise((resolve, reject) => {
+    var $html = $($.parseHTML(resp));
+    var marcadores = [];
+    var $tabela = $("#frmMarcadorLista table tr[class]", $html);
+    if ($tabela.length) {
+      $tabela.each(function () {
+        var marcador = {
+          id: $("td:eq(3)", $(this)).text(),
+          nome: $("td:eq(2)", $(this)).text(),
+          cor: $("td:eq(1) > a > img", $(this)).attr("src")
+        };
+        marcador.cor = marcador.cor.substring(
+          marcador.cor.indexOf("_") + 1,
+          marcador.cor.indexOf(".png")
+        );
+        marcadores.push(marcador);
+      });
+      resolve(marcadores);
+    } else {
+      reject("Não existem marcadores");
+    }
   });
 }

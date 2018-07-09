@@ -203,7 +203,7 @@ function ws_loginGui() {
 
 function ws_autenticar() {
   return ws_loginGui().then(data => {
-    console.log(wsapiname + wspai.autenticar);
+    console.log(wsapiname + "POST " + GetBaseUrl() + modwsapi + wsapi.autenticar);
     return fetch(GetBaseUrl() + modwsapi + wsapi.autenticar, { body: JSON.stringify(data), headers: { 'content-type': 'application/json' }, method: 'POST' });
   }).then(response => response.json()).then(json => {
     return browser.storage.local.set(JSON.parse('{"' + __storageName + '": ' + JSON.stringify(json.data) + "}")).then(() => json.data);
@@ -226,7 +226,7 @@ function ws_token(Validar = false) {
 
 function ws_post(apirest, json_data) {
   return ws_token().then(function (Login) {
-    console.log(wsapiname + apirest);
+    console.log(wsapiname + "POST " + GetBaseUrl() + modwsapi + apirest, json_data);
     return fetch(GetBaseUrl() + modwsapi + apirest, {
       body: JSON.stringify(json_data),
       headers: { 'content-type': 'application/json', 'token': Login.token },
@@ -245,8 +245,8 @@ function ws_post(apirest, json_data) {
   });
 }
 
-function ws_get(apirest, params, id_url = null) {
-  var urlapi = GetBaseUrl() + modwsapi + apirest + (params != null ? "?" + params : "");
+function ws_get(apirest, params = null, id_url = null) {
+  var urlapi = GetBaseUrl() + modwsapi + apirest + (params != null && params != "" ? "?" + params : "");
   if (urlapi.indexOf("{") != -1) {
     if (id_url != null) {
       urlapi = urlapi.replace(/\{\w+\}/g, id_url);
@@ -255,7 +255,7 @@ function ws_get(apirest, params, id_url = null) {
     }
   }
   return ws_token().then(function (Login) {
-    console.log(wsapiname + apirest);
+    console.log(wsapiname + "GET " + urlapi);
     return fetch(urlapi, {
       headers: { 'content-type': 'application/json', 'token': Login.token },
       method: 'GET'

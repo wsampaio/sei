@@ -83,10 +83,10 @@ function ControleGerencial() {
       var $throw = $("<tr/>");
       $throw.append($("<th/>").text("Processo"));
       $throw.append($("<th/>").text("tipo").addClass("columnHide"));
-      $throw.append($("<th/>").text("Sugestão de encaminhamento").attr("style", "width: 10px; white-space: nowrap;"));
-      $throw.append($("<th/>").text("Despacho da autoridade").attr("style", "width: 10px; white-space: nowrap;"));
-      $throw.append($("<th/>").text("Acompanhamento").attr("style", "width: 10px; white-space: nowrap;"));
-      $throw.append($("<th/>").text("Ações").attr("style", "width: 10px;"));
+      $throw.append($("<th/>").text("Anotação").addClass("columnNowrap"));
+      $throw.append($("<th/>").text("Marcador").addClass("columnNowrap"));
+      $throw.append($("<th/>").text("Acompanhamento").addClass("columnNowrap"));
+      $throw.append($("<th/>").text("Ações").addClass("columnNowrap"));
       $thead.append($throw);
     }
 
@@ -133,15 +133,17 @@ function ControleGerencial() {
       $trrow.append($("<td/>").text(processo.atributos.tipoProcesso).addClass("columnHide"));
 
       /** (Anotação) Sugestão de encaminhamento */
+      var $anotacao = $("<td/>").attr("idproc", processo.atributos.idProcedimento).attr("prioridade", false);
       if (processo.atributos.anotacoes.length > 0) {
-        $trrow.append($("<td/>").text(processo.atributos.anotacoes[0].descricao).css(processo.atributos.anotacoes[0].sinPrioridade == "S" ? { backgroundColor: "red" } : { backgroundColor: "yellow" }));
-      } else {
-        $trrow.append($("<td/>"));
+        $anotacao.text(processo.atributos.anotacoes[0].descricao).css(processo.atributos.anotacoes[0].sinPrioridade == "S" ? { backgroundColor: "red" } : { backgroundColor: "yellow" })
+        .attr("prioridade", processo.atributos.anotacoes[0].sinPrioridade == "S" ? true : false);
       }
+      $anotacao.on("dblclick", dblclick_anotacao);
+      $trrow.append($anotacao);
 
       /** (Marcador) Despacho da autoridade / ???? não está implementado no wssei */
       $trrow.append($("<td/>")
-        .append($("<div/>").text(DadosExtras.marcador.marcador))
+        .append($("<select/>").val(1).text(DadosExtras.marcador.marcador))
         .append($("<div/>").text(DadosExtras.marcador.texto))
       );
       /** Acompanhamento Especial */
@@ -151,6 +153,52 @@ function ControleGerencial() {
       $trrow.append($("<td/>").text("X"));
       $tbody.append($trrow);
     }
+
+    function dblclick_anotacao() {
+      var $dialog = $("<div/>")
+        .attr("id", "dblclick_anotacao")
+        .attr("title", "Editar anotação")
+        .append($("<textarea/>").text($(this).text()).css({ width: "250px", height: "150px", resize: "none" }))
+        .append($("<input/>").attr("type", "checkbox"))
+        .append($("<label/>").text("Prioridade"));
+      var $anotacao = $(this);
+      if ($anotacao.attr("prioridade") == "true") $dialog.find("input").attr("checked", "checked");
+      $("body").append($dialog);
+      $dialog = $dialog.dialog({
+        autoOpen: false, height: 270, width: 275, modal: true, resizable: false,
+        buttons: {
+          Salvar: function () {
+            ws_token().then(Login => {
+              var data = {
+                descricao: $dialog.find("textarea").val(),
+                protocolo: $anotacao.attr("idproc"),
+                unidade: Login.loginData.IdUnidadeAtual,
+                usuario: Login.loginData.IdUsuario,
+                prioridade: $dialog.find("input").prop("checked") ? "S" : "N"
+              };
+              console.log($dialog.find("input[checked]"));
+              return ws_post(wsapi.anotacao, data);
+            }).then(function (params) {
+              console.log(params);
+              $anotacao.text($dialog.find("textarea").val());
+              $anotacao.css($dialog.find("input").prop("checked") ? { backgroundColor: "red" } : $dialog.find("textarea").val() == "" ? { backgroundColor: "" } : { backgroundColor: "yellow" });
+              $dialog.dialog("close");
+            }).catch(function (err) {
+              alert(err);
+            });
+          },
+          Cancelar: function () {
+            $dialog.dialog("close");
+          }
+        },
+        close: function () {
+          $dialog.dialog("destroy");
+          $("#dblclick_anotacao").remove();
+        }
+      });
+      $dialog.dialog("open");
+    }
+
   };
 
   return data;
