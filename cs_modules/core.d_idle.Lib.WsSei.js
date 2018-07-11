@@ -50,7 +50,7 @@ const wsapi = {
     listar: "/processo/listar",
     pesquisar: "/processo/pesquisar",
     listar_meus_acompanhamentos: "/processo/listar/meus/acompanhamentos",
-    acompanhamentos: "/processo/listar/acompanhamentos",
+    listar_acompanhamentos: "/processo/listar/acompanhamentos",
     enviar: "/processo/enviar",
     concluir: "/processo/concluir",
     reabrir: "/processo/reabrir/{procedimento}",
@@ -73,7 +73,7 @@ const wsapi = {
     orgao: "/assinante/orgao"
   },
   grupoacompanhamento: {
-    listar: "/grupoacompanhamento/listar/{unidade}:"
+    listar: "/grupoacompanhamento/listar/{unidade}"
   },
   observacao: "/observacao/"
 };
@@ -224,8 +224,15 @@ function ws_token(Validar = false) {
   });
 }
 
-function ws_post(apirest, json_data) {
+function ws_post(apirest, json_data, id_url = null) {
   return ws_token().then(function (Login) {
+    if (apirest.indexOf("{") != -1) {
+      if (id_url != null) {
+        apirest = apirest.replace(/\{\w+\}/g, apirest);
+      } else {
+        return Promise.reject("Necessário informar o id: " + apirest.match(/\{\w+\}/g));
+      }
+    }
     console.log(wsapiname + "POST " + GetBaseUrl() + modwsapi + apirest, json_data);
     return fetch(GetBaseUrl() + modwsapi + apirest, {
       body: JSON.stringify(json_data),

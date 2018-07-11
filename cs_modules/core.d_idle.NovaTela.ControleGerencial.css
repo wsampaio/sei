@@ -1,3 +1,4 @@
+/** Colunas **/
 .columnHide{
   display: none;
 }
@@ -7,3 +8,69 @@
   white-space: nowrap;
 }
 
+/** links **/
+#TabelaGR a, #TabelaGR a:link {
+  color: blue;
+}
+#TabelaGR a:hover {
+  color: #00539f;
+}
+#TabelaGR a:active {
+  color: #00539f;
+}
+
+/** Processos **/
+#TabelaGR > tbody > tr > td:nth-child(1) div[id^='proc'] {
+  display: flex;
+}
+#TabelaGR > tbody > tr > td:nth-child(1) div:nth-child(2) {
+  padding: 10px;
+}
+#TabelaGR > tbody > tr > td:nth-child(1) div[id^='proc'] img {
+  padding-left: 5px;
+}
+
+/** Anotação **/
+#TabelaGR > tbody > tr > td[prioridade='true']:not(:empty)  {
+  background-color: rgb(252, 70, 70);
+}
+#TabelaGR > tbody > tr > td[prioridade='false']:not(:empty) {
+  background-color: rgb(234, 230, 114);
+}
+
+/** Marcador **/
+#TabelaGR > tbody > tr > td:nth-child(4) > div#img {
+  display: flex;
+  border: 1px lightgray solid;
+  border-radius: 5px;
+  padding: 1px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+#TabelaGR > tbody > tr > td:nth-child(4) div:nth-child(2) {
+  padding: 5px;
+}
+
+/** Acompanhamento **/
+#TabelaGR > tbody > tr > td:nth-child(5) div#img {
+  display: flex;
+  border: 1px lightgray solid;
+  border-radius: 5px;
+  padding: 1px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+#TabelaGR > tbody > tr > td:nth-child(5) div:nth-child(2) {
+  padding: 5px;
+}
+
+/** Comandos **/
+#TabelaGR > tbody > tr > td:nth-child(6) {
+  vertical-align: middle;
+}
+#TabelaGR > tbody > tr > td:nth-child(6) > div {
+  display: table;
+}
+#TabelaGR > tbody > tr > td:nth-child(6) img[src="imagens/sei_concluir_processo.gif"] {
+  width: 20px;
+}

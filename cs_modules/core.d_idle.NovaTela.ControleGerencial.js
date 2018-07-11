@@ -9,6 +9,20 @@ function ControleGerencial() {
     mconsole.log("Criando nova tela de controle gerencial...");
     var IdTabela = "TabelaGR";
     var $tabela = null;
+    var Marcadores = [];
+    var GrupoAcompanhamentos = [];
+
+    /** Pega a lista de marcadores */
+    ext_ws_get(ext_wsapi.marcador.listar).then(function (marc) {
+      Marcadores = marc;
+      console.log("marcadores: ", marc);
+    }).catch(console.log);
+
+    /** Pega a lista de marcadores */
+    ws_get(wsapi.grupoacompanhamento.listar).then(function (grupoacomp) {
+      GrupoAcompanhamentos = grupoacomp;
+      console.log("marcadores: ", GrupoAcompanhamentos);
+    }).catch(console.log);
 
     /** Título da nova tela */
     $("#divInfraBarraLocalizacao").text("Controle Gerencial de processos");
@@ -30,7 +44,9 @@ function ControleGerencial() {
           return ext_ws_get(ext_wsapi.processo.consultar, null, processo.atributos.idProcedimento).then(function (proc) {
             return ext_ws_get(ext_wsapi.processo.consultar_dados, proc).then(function (dados) {
               return ext_ws_get(ext_wsapi.processo.marcador, proc).then(function (mardador) {
-                return Promise.resolve({ processo: proc, dados: dados, marcador: mardador });
+                return ext_ws_get(ext_wsapi.processo.acompanhamento, proc).then(function (acompanhamento) {
+                  return Promise.resolve({ processo: proc, dados: dados, marcador: mardador, acompanhamento: acompanhamento });
+                });
               });
             });
           });
@@ -129,28 +145,83 @@ function ControleGerencial() {
           .attr("title", DadosExtras.processo.Flags.Marcador.Nome)
         );
       }
+      if (DadosExtras.acompanhamento.id != -1) {
+        $("div[id^='proc']", $trrow).append($("<img/>")
+          .attr("src", "imagens/sei_acompanhamento_especial_pequeno.png")
+          .attr("title", "Acompanhamento Especial")
+        );
+      }
       /** (HIDE)Tipo de processo */
       $trrow.append($("<td/>").text(processo.atributos.tipoProcesso).addClass("columnHide"));
 
       /** (Anotação) Sugestão de encaminhamento */
       var $anotacao = $("<td/>").attr("idproc", processo.atributos.idProcedimento).attr("prioridade", false);
       if (processo.atributos.anotacoes.length > 0) {
-        $anotacao.text(processo.atributos.anotacoes[0].descricao).css(processo.atributos.anotacoes[0].sinPrioridade == "S" ? { backgroundColor: "red" } : { backgroundColor: "yellow" })
-        .attr("prioridade", processo.atributos.anotacoes[0].sinPrioridade == "S" ? true : false);
+        $anotacao.text(processo.atributos.anotacoes[0].descricao)
+          .attr("prioridade", processo.atributos.anotacoes[0].sinPrioridade == "S" ? true : false);
       }
       $anotacao.on("dblclick", dblclick_anotacao);
       $trrow.append($anotacao);
 
-      /** (Marcador) Despacho da autoridade / ???? não está implementado no wssei */
-      $trrow.append($("<td/>")
-        .append($("<select/>").val(1).text(DadosExtras.marcador.marcador))
-        .append($("<div/>").text(DadosExtras.marcador.texto))
+      /** (Marcador) Despacho da autoridade */
+      var $marcador = $("<td/>").attr("idproc", processo.atributos.idProcedimento);
+      $marcador.append($("<div/>").attr("id", "img")
+        .append($("<img/>"))
+        .append($("<label/>"))
       );
+      $marcador.append($("<div/>").attr("id", "text"));
+      if (DadosExtras.processo.Flags.Marcador.Nome != null) {
+        $marcador.find("#img > img")
+          .attr("src", "imagens/marcador_" + DadosExtras.processo.Flags.Marcador.Cor + ".png")
+          .attr("title", DadosExtras.processo.Flags.Marcador.Nome);
+        $marcador.find("#img > label")
+          .text(DadosExtras.processo.Flags.Marcador.Nome);
+        $marcador.find("#text").text(DadosExtras.marcador.texto);
+      } else {
+        $marcador.find("#img").hide();
+      }
+      $marcador.on("dblclick", dblclick_marcador);
+      $trrow.append($marcador);
+
       /** Acompanhamento Especial */
-      $trrow.append($("<td/>").text("asdkfjsd lf sflsdf ls"));
+      var $acompanhamento = $("<td/>").attr("idproc", processo.atributos.idProcedimento)
+        .attr("idacomp", DadosExtras.acompanhamento.id);
+      $acompanhamento.append($("<div/>").attr("id", "img")
+        .append($("<img/>"))
+        .append($("<label/>"))
+      );
+      $acompanhamento.append($("<div/>").attr("id", "text"));
+      if (DadosExtras.acompanhamento.id != -1) {
+        $acompanhamento.find("#img > img")
+          .attr("src", "imagens/sei_acompanhamento_especial_pequeno.png")
+          .attr("title", "Acompanhamento Especial");
+        if (DadosExtras.acompanhamento.grupo != null) {
+          $acompanhamento.find("#img > label")
+            .text(DadosExtras.acompanhamento.grupo.nome);
+        }
+        $acompanhamento.find("#text").text(DadosExtras.acompanhamento.observacao);
+      } else {
+        $acompanhamento.find("#img").hide();
+      }
+      $acompanhamento.on("dblclick", dblclick_acompanhamento);
+      $trrow.append($acompanhamento);
 
       /** Açoes */
-      $trrow.append($("<td/>").text("X"));
+      var $acoes = $("<td/>");
+      $acao_ciencia = $("<div/>");
+      $acao_concluir = $("<div/>");
+
+      $acao_ciencia.append($("<img/>").attr("src", "imagens/sei_ciencia_pequeno.gif"))
+        .attr("idproc", processo.atributos.idProcedimento)
+        .on("click", click_acao_ciencia);
+      $acao_concluir.append($("<img/>").attr("src", "imagens/sei_concluir_processo.gif"))
+        .attr("idproc", processo.atributos.numero)
+        .on("click", click_acao_concluir);
+
+      $acoes.append($acao_ciencia).append($acao_concluir);
+      $trrow.append($acoes);
+
+      /** FIM */
       $tbody.append($trrow);
     }
 
@@ -197,6 +268,191 @@ function ControleGerencial() {
         }
       });
       $dialog.dialog("open");
+    }
+
+    function dblclick_marcador() {
+      var $select = $("<select/>");
+      var $textarea = $("<textarea/>").css({ width: "250px", height: "150px", resize: "none" });
+      var $dialog = $("<div/>")
+        .attr("id", "dblclick_marcador")
+        .attr("title", "Editar Marcador")
+        .append($("<label/>").text("Marcador"))
+        .append($select)
+        .append($textarea);
+      var $marcador = $(this);
+      $select.append($("<option/>").text("").val(null));
+      Marcadores.forEach(function (Marcador) {
+        $select.append($("<option/>").text(Marcador.nome).val(Marcador.id));
+      });
+      $select.find("option").each(function () {
+        if ($marcador.find("#img > label").text() == $(this).text()) {
+          $(this).attr("selected", "selected");
+        }
+      });
+      $textarea.text($marcador.find("#text").text());
+      alert("ok");
+      $("body").append($dialog);
+      $dialog = $dialog.dialog({
+        autoOpen: false, height: 270, width: 275, modal: true, resizable: false,
+        buttons: {
+          Salvar: Salvar,
+          Cancelar: function () {
+            $dialog.dialog("close");
+          }
+        },
+        close: function () {
+          $dialog.dialog("destroy");
+          $("#dblclick_marcador").remove();
+        }
+      });
+      $dialog.dialog("open");
+
+      function Salvar() {
+        var Marcador = {
+          id: $select.val(),
+          idProcesso: $marcador.attr("idproc"),
+          texto: $textarea.val()
+        }
+        alert($select.val() + " - " + $textarea.val());
+        ext_ws_post(ext_wsapi.processo.marcador, Marcador).then(ret => {
+          if (Marcador.id == "") {
+            $marcador.find("#img").hide();
+            $marcador.find("#text").text("");
+          } else {
+            var m = Marcadores.find(m => m.id == Marcador.id);
+            $marcador.find("#img > img")
+              .attr("src", "imagens/marcador_" + m.cor + ".png")
+              .attr("title", m.nome);
+            $marcador.find("#img > label")
+              .text(m.nome);
+            $marcador.find("#img").show();
+            $marcador.find("#text").text(Marcador.texto);
+
+            /** Atualiza a flag no processo */
+            $marcador.parent().find("td:first > div[id^='proc']").append($("<img/>")
+              .attr("src", "imagens/marcador_" + m.cor + ".png")
+              .attr("title", m.nome));
+          }
+          $dialog.dialog("close");
+        }).catch(function (err) {
+          console.log(err);
+          alert(err);
+        });
+      }
+    }
+
+    function dblclick_acompanhamento() {
+      var $select = $("<select/>");
+      var $textarea = $("<textarea/>").css({ width: "250px", height: "150px", resize: "none" });
+      var $dialog = $("<div/>")
+        .attr("id", "dblclick_acompanhamento")
+        .attr("title", "Editar Marcador")
+        .append($("<label/>").text("Marcador"))
+        .append($select)
+        .append($textarea);
+      var $acompanhamento = $(this);
+      var id = $acompanhamento.attr("idacomp");
+      $select.append($("<option/>").text("").val(null));
+      GrupoAcompanhamentos.forEach(function (Grupo) {
+        $select.append($("<option/>").text(Grupo.nome).val(Grupo.id));
+      });
+      $select.find("option").each(function () {
+        if ($acompanhamento.find("#img > label").text() == $(this).text()) {
+          $(this).attr("selected", "selected");
+        }
+      });
+      $textarea.text($acompanhamento.find("#text").text());
+      $("body").append($dialog);
+      $dialog = $dialog.dialog({
+        autoOpen: false, height: 270, width: 275, modal: true, resizable: false,
+        buttons: {
+          Excluir: Excluir,
+          Salvar: Salvar,
+          Cancelar: function () {
+            $dialog.dialog("close");
+          }
+        },
+        close: function () {
+          $dialog.dialog("destroy");
+          $("#dblclick_acompanhamento").remove();
+        }
+      });
+      $dialog.dialog("open");
+
+      function Salvar() {
+        var Acompanhamento = {
+          grupo: $select.val(),
+          protocolo: $acompanhamento.attr("idproc"),
+          observacao: $textarea.val()
+        }
+        alert($select.val() + " - " + $textarea.val());
+        var ws;
+        if (id == -1) { /** Novo acompanhamento */
+          ws = ws_post(wsapi.processo.acompanhar, Acompanhamento);
+        } else { /** Alterar acompanhamento */
+          var acomp = {
+            id: id,
+            idProcesso: Acompanhamento.protocolo,
+            grupo: Acompanhamento.grupo,
+            observacao: Acompanhamento.observacao
+          }
+          ws = ext_ws_post(ext_wsapi.processo.acompanhamento, acomp);
+          console.log("Alterar o acompanhamento");
+        }
+        ws.then(ret => {
+          if (Acompanhamento.grupo == "null") {
+            //$acompanhamento.find("#img").hide();
+            $acompanhamento.find("#text").text("");
+          } else {
+            var m = GrupoAcompanhamentos.find(m => m.id == Acompanhamento.grupo);
+            $acompanhamento.find("#img > img")
+              .attr("src", "imagens/sei_acompanhamento_especial_pequeno.png")
+              .attr("title", "Acompanhamento Especial");
+
+            $acompanhamento.find("#img > label").text(m == undefined ? "" : m.nome);
+            $acompanhamento.find("#img").show();
+            $acompanhamento.find("#text").text(Acompanhamento.observacao);
+
+            /** Atualiza a flag no processo */
+            $acompanhamento.parent().find("td:first > div[id^='proc']").append($("<img/>")
+              .attr("src", "imagens/sei_acompanhamento_especial_pequeno.png")
+              .attr("title", "Acompanhamento Especial"));
+          }
+          $dialog.dialog("close");
+        }).catch(function (err) {
+          console.log(err);
+          alert(err);
+        });
+      }
+
+      function Excluir() {
+        alert("não implementado");
+      }
+    }
+
+    function click_acao_ciencia() {
+      var $acao_ciencia = $(this).attr("idproc");
+      ws_post(wsapi.processo.ciencia, null, $acao_ciencia).then(resp => {
+        /** Atualiza a flag no processo */
+        $acao_ciencia.parent().find("td:first > div[id^='proc']").append($("<img/>")
+          .attr("src", "imagens/sei_ciencia_pequeno.gif"));
+        alert("Ciência registrada para o processo");
+      }).catch(err => {
+        alert(err);
+      });
+    }
+    function click_acao_concluir() {
+      var $acao_concluir = $(this);
+      var nprocesso = $acao_concluir.attr("idproc");
+      ws_post(wsapi.processo.concluir, { numeroProcesso: nprocesso }).then(resp => {
+        /** Atualiza a flag no processo */
+        $acao_concluir.parent().parent().remove();
+        $tabela.trigger("update");
+
+        alert("Processo concluído");
+      }).catch(err => {
+        alert(err);
+      });
     }
 
   };

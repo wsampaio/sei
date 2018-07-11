@@ -7,15 +7,66 @@ var ext_wsapi = {
   processo: {
     consultar: "__ProcessoConsultar",
     consultar_dados: "procedimento_alterar",
-    marcador: "andamento_marcador_gerenciar"
+    marcador: "andamento_marcador_gerenciar",
+    acompanhamento: "acompanhamento_cadastrar",
+    acomapnhamento_excluir: "acompanhamento_cadastrar"
   },
   marcador: {
     listar: "marcador_listar"
+
   }
 }
 
 function ext_ws_post(apirest, json_data) {
-
+  if (__isInGroup(ext_wsapi, apirest)) {
+    if (__isInGroup(ext_wsapi.processo, apirest)) {
+      return ext_ws_get(ext_wsapi.processo.consultar, null, json_data.idProcesso).then(proc => {
+        /** Pega o link para buscar os dados */
+        var link = proc.LinkComandos.reduce((acc, cur, i) => {
+          if (cur.indexOf(apirest) != -1) acc = cur;
+          return acc;
+        });
+        console.log(apirest + "GET " + apirest + " > " + link);
+        return fetch(link, { method: 'GET' });
+      }).then(response => {
+        /** Converte a resposta para ISO-8859-1 */
+        var contentType = response.headers.get("content-type");
+        if (response.ok) {
+          if (contentType && contentType.includes("text/html")) {
+            return response.arrayBuffer().then(buf => new TextDecoder('ISO-8859-1').decode(buf));
+          } else { console.log(contentType); throw new Error("Erro no Content Type esperado!"); }
+        } else {
+          throw new Error(response.statusText + ": " + response.status);
+        }
+      }).then(resp => {
+        /** Trata a resposta de acordo com a api */
+        switch (apirest) {
+          case ext_wsapi.processo.marcador:
+            return __ProcessoCadastrarMarcador(resp, json_data);
+          case ext_wsapi.processo.acompanhamento:
+            return __ProcessoAcompanhamentoCadastrarAlterar(resp, json_data);
+          default:
+            return Promise.reject(ext_wsapiname + ": Api não implementada");
+        }
+      }).then(post => {
+        /** Envia o post da requisição */
+        console.log(ext_wsapiname + "POST " + apirest + " > " + post.url, post.data);
+        return fetch(post.url, {
+          body: JSON.stringify(post.data),
+          headers: { 'content-type': 'application/x-www-form-urlencoded' },
+          method: 'POST'
+        });
+      }).then(resp => {
+        if (resp.ok) {
+          return json_data;
+        } else {
+          return Promise.reject(resp);
+        }
+      });
+    }
+  } else {
+    reject(Error("Api não implementada: " + apirest));
+  }
 }
 
 function ext_ws_get(apirest, params = null, id_url = null) {
@@ -32,13 +83,21 @@ function ext_ws_get(apirest, params = null, id_url = null) {
             throw new Error("IdProcesso não informado");
           }
         } else {/** Pega o link do comando */
-          link = params.LinkComandos.reduce((acc, cur, i) => {
-            if (cur.indexOf(apirest) != -1) acc = cur;
-            return acc;
+          link = params.LinkComandos.find(function (cmd) {
+            if (cmd.indexOf(apirest) != -1) return cmd;
           });
         }
+        if (link == undefined) {
+          switch (apirest) {
+            // case ext_wsapi.processo.acompanhamento:
+            //   var resp = {msg: null, ok: true, headers: new Headers({ "content-type": "wsapi" }) };
+            //   return resp;
+            default:
+              throw new Error(ext_wsapiname + ": Link de comando do processo não encontrado: " + apirest);
+          }
+        }
       } else { /** comandos do menu */
-        link = $("#main-menu li a[href^='controlador.php?acao='" + apirest + "']");
+        link = GetBaseUrl() + $("#main-menu li a[href^='controlador.php?acao=" + apirest + "']").attr("href");
       }
     } else {
       throw new Error("Api não implementada: " + apirest);
@@ -51,6 +110,8 @@ function ext_ws_get(apirest, params = null, id_url = null) {
     if (response.ok) {
       if (contentType && contentType.includes("text/html")) {
         return response.arrayBuffer().then(buf => new TextDecoder('ISO-8859-1').decode(buf));
+      } else if (contentType && contentType.includes("wsapi")) {
+        return response.msg;
       } else { console.log(contentType); throw new Error("Erro no Content Type esperado!"); }
     } else {
       throw new Error(response.statusText + ": " + response.status);
@@ -63,6 +124,8 @@ function ext_ws_get(apirest, params = null, id_url = null) {
         return __ProcessoConsultarDados(resp);
       case ext_wsapi.processo.marcador:
         return __ProcessoConsultarMarcador(resp);
+      case ext_wsapi.processo.acompanhamento:
+        return __ProcessoAcompanhamentoConsultar(resp);
       case ext_wsapi.marcador.listar:
         return __MarcadorListar(resp);
       default:
@@ -73,7 +136,7 @@ function ext_ws_get(apirest, params = null, id_url = null) {
 
 function __isInGroup(group, value) {
   for (const iterator in group) {
-    if (typeof group[iterator] == "object") return __isInGroup(group[iterator], value);
+    if (typeof group[iterator] == "object") if (__isInGroup(group[iterator], value)) return true;
     if (group[iterator] == value) return true;
   }
   return false;
@@ -225,27 +288,131 @@ function __ProcessoConsultarMarcador(resp) {
         marcador.historico.push(historico);
       });
       var $optsel = $("#selMarcador option[selected]", $html);
-      marcador.id = $optsel.val();
-      marcador.marcador = $optsel.text();
-      marcador.data = marcador.historico[0].data;
-      marcador.usuario = marcador.historico[0].usuario;
-      marcador.texto = marcador.historico[0].texto;
-      marcador.cor = $optsel.attr("data-imagesrc");
-      marcador.cor = marcador.cor.substring(
-        marcador.cor.indexOf("_") + 1,
-        marcador.cor.indexOf(".png")
-      );
+      if ($optsel.val() != "null") {
+        console.log($optsel);
+        marcador.id = $optsel.val();
+        marcador.marcador = $optsel.text();
+        marcador.data = marcador.historico[0].data;
+        marcador.usuario = marcador.historico[0].usuario;
+        marcador.texto = marcador.historico[0].texto;
+        marcador.cor = $optsel.attr("data-imagesrc");
+        marcador.cor = marcador.cor.substring(
+          marcador.cor.indexOf("_") + 1,
+          marcador.cor.indexOf(".png")
+        );
+      }
     }
     resolve(marcador);
   });
 }
+/*var Marcador = {
+  id: -1,
+  idProcesso: -1,
+  texto: ""
+}
+var post = {
+  url: "",
+  data: ""
+}*/
+function __ProcessoCadastrarMarcador(resp, json_data) {
+  return new Promise((resolve, reject) => {
+    var $html = $($.parseHTML(resp));
+    var post = { url: "", data: "" };
+    post.url = GetBaseUrl() + $("#frmGerenciarMarcador", $html).attr("action");
 
+    $("#frmGerenciarMarcador [name]", $html).each(function () {
+      var name = $(this).attr("name");
+      var val = $(this).val();
+      post.data = post.data + (post.data == "" ? "" : "&");
+      post.data = post.data + name + "=";
+      if (name == "hdnIdMarcador") {
+        post.data = post.data + json_data.id;
+      } else if (name == "txaTexto") {
+        post.data = post.data + json_data.texto;
+      } else {
+        post.data = post.data + val;
+      }
+    });
+    post.data = encodeURI(post.data.replace(/\s/g, "+"));
+    resolve(post);
+  });
+}
+
+function __ProcessoAcompanhamentoConsultar(resp) {
+  return new Promise((resolve, reject) => {
+    var acompanhamento = {
+      id: -1,
+      grupo: null,
+      observacao: ""
+    }
+    //console.log(resp);
+    if (true/* resp != null */) {
+      /** Se tiver acomapnhamento */
+      var $html = $($.parseHTML(resp));
+      acompanhamento.id = $("#hdnIdAcompanhamento", $html).val();
+      acompanhamento.id = acompanhamento.id == "" ? -1 : acompanhamento.id;
+      acompanhamento.observacao = $("#txaObservacao", $html).val();
+      var $sel = $("#selGrupoAcompanhamento > option[selected]");
+      if ($sel.val() != undefined) {
+        var grupo = {
+          id: $sel.val(),
+          nome: $sel.text()
+        }
+        acompanhamento.grupo = grupo;
+      }
+    }
+    resolve(acompanhamento);
+  });
+}
+var acompanhamento = {
+  id: -1,
+  idProcesso: -1,
+  grupo: null,
+  observacao: ""
+}
+function __ProcessoAcompanhamentoCadastrarAlterar(resp, json_data) {
+  return new Promise((resolve, reject) => {
+    var $html = $($.parseHTML(resp));
+    var post = { url: "", data: "" };
+    post.url = GetBaseUrl() + $("#frmAcompanhamentoCadastro", $html).attr("action");
+
+    $("#frmAcompanhamentoCadastro [name]", $html).each(function () {
+      var name = $(this).attr("name");
+      var val = $(this).val();
+      var excludes = ["btnExcluir"];
+      if (excludes.find(n => n == name) == undefined && val != undefined) {
+        post.data = post.data + (post.data == "" ? "" : "&");
+        post.data = post.data + name + "=";
+        switch (name) {
+          case "txaObservacao":
+            post.data = post.data + json_data.observacao;
+            break;
+          case "selGrupoAcompanhamento":
+            post.data = post.data + json_data.grupo;
+            break;
+          case "hdnIdAcompanhamento":
+            post.data = post.data + json_data.id;
+            break;
+          case "hdnIdProcedimento":
+            post.data = post.data + json_data.idProcesso;
+            break;
+          default:
+            post.data = post.data + val;
+            break;
+        }
+      }
+    });
+    post.data = encodeURI(post.data.replace(/\s/g, "+"));
+    resolve(post);
+  });
+}
 function __MarcadorListar(resp) {
-  return new new Promise((resolve, reject) => {
+  return new Promise((resolve, reject) => {
     var $html = $($.parseHTML(resp));
     var marcadores = [];
-    var $tabela = $("#frmMarcadorLista table tr[class]", $html);
+    var $tabela = $("#divInfraAreaTabela > table > tbody > tr[class]", $html);
     if ($tabela.length) {
+      console.log($tabela.html());
       $tabela.each(function () {
         var marcador = {
           id: $("td:eq(3)", $(this)).text(),

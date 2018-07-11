@@ -37,7 +37,8 @@
       "run_at": "document_idle",
       "css": [
         "lib/jquery-ui/jquery-ui.min.css",
-        "lib/jquery.tablesorter/theme.blue.min.css", "lib/jquery.tablesorter/theme.dark.min.css"
+        "lib/jquery.tablesorter/theme.blue.min.css", "lib/jquery.tablesorter/theme.dark.min.css",
+        "cs_modules/core.d_idle.NovaTela.ControleGerencial.css"
       ],
       "all_frames": true,
       "js": [
