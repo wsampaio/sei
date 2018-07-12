@@ -7,6 +7,10 @@
   width: 10px;
   white-space: nowrap;
 }
+.tablesorter-header-inner {
+  font-weight: bold;
+  text-align: center;
+}
 
 /** links **/
 #TabelaGR a, #TabelaGR a:link {

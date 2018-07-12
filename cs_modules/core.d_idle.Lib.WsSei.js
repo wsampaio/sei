@@ -228,7 +228,7 @@ function ws_post(apirest, json_data, id_url = null) {
   return ws_token().then(function (Login) {
     if (apirest.indexOf("{") != -1) {
       if (id_url != null) {
-        apirest = apirest.replace(/\{\w+\}/g, apirest);
+        apirest = apirest.replace(/\{\w+\}/g, id_url);
       } else {
         return Promise.reject("Necessário informar o id: " + apirest.match(/\{\w+\}/g));
       }
