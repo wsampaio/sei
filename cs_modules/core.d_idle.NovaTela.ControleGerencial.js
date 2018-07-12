@@ -25,7 +25,7 @@ function ControleGerencial() {
     }).catch(console.log);
 
     /** Título da nova tela */
-    $("#divInfraBarraLocalizacao").text("Controle Gerencial de processos");
+    $("#divInfraBarraLocalizacao").text("Controle Gerencial de Processos");
     $("#divInfraAreaDados").removeAttr("style").append('<img id="imgAguarde" src="/infra_css/imagens/aguarde.gif" />');
 
     TabelaCriar();
@@ -45,7 +45,9 @@ function ControleGerencial() {
             return ext_ws_get(ext_wsapi.processo.consultar_dados, proc).then(function (dados) {
               return ext_ws_get(ext_wsapi.processo.marcador, proc).then(function (mardador) {
                 return ext_ws_get(ext_wsapi.processo.acompanhamento, proc).then(function (acompanhamento) {
-                  return Promise.resolve({ processo: proc, dados: dados, marcador: mardador, acompanhamento: acompanhamento });
+                  return ws_get(wsapi.processo.listar_ciencia, null, processo.atributos.idProcedimento).then(function (ciencias) {
+                    return Promise.resolve({ processo: proc, dados: dados, marcador: mardador, acompanhamento: acompanhamento, ciencias: ciencias });
+                  });
                 });
               });
             });
@@ -151,12 +153,16 @@ function ControleGerencial() {
           .attr("title", "Acompanhamento Especial")
         );
       }
-      // if (DadosExtras.acompanhamento.id != -1) { /** Ciência */
-      //   $("div[id^='proc']", $trrow).append($("<img/>")
-      //     .attr("src", "imagens/sei_acompanhamento_especial_pequeno.png")
-      //     .attr("title", "Acompanhamento Especial")
-      //   );
-      // }
+      if (DadosExtras.ciencias.length > 0) { /** Ciência */
+        var list_ciencia = "";
+        var $ciencia = $("<img/>").attr("src", "imagens/sei_ciencia_pequeno.gif");
+
+        DadosExtras.ciencias.forEach(function (ciencia) {
+          list_ciencia = list_ciencia.concat(ciencia.nome, " - ", ciencia.data, "\n");
+        });
+        $ciencia.attr("title", list_ciencia);
+        $("div[id^='proc']", $trrow).append($ciencia);
+      }
       /** (HIDE)Tipo de processo */
       $trrow.append($("<td/>").text(processo.atributos.tipoProcesso).addClass("columnHide"));
 
@@ -258,7 +264,11 @@ function ControleGerencial() {
             }).then(function (params) {
               console.log(params);
               $anotacao.text($dialog.find("textarea").val());
-              $anotacao.css($dialog.find("input").prop("checked") ? { backgroundColor: "red" } : $dialog.find("textarea").val() == "" ? { backgroundColor: "" } : { backgroundColor: "yellow" });
+              if ($dialog.find("input").prop("checked")) {
+                $anotacao.attr("prioridade", true);
+              } else {
+                $anotacao.attr("prioridade", false);
+              }
               $dialog.dialog("close");
             }).catch(function (err) {
               alert(err);
@@ -340,7 +350,7 @@ function ControleGerencial() {
                 .attr("title", m.nome));
             } else {
               $flag_marcador.attr("src", "imagens/marcador_" + m.cor + ".png")
-              .attr("title", m.nome);
+                .attr("title", m.nome);
             }
           }
           $dialog.dialog("close");
@@ -447,9 +457,19 @@ function ControleGerencial() {
         /** Atualiza a flag no processo */
         var $flag_ciencia = $acao_ciencia.parent().parent().find("td:first > div[id^='proc'] > img[src*='sei_ciencia_pequeno']");
         if ($flag_ciencia.length == 0) {
-          $acao_ciencia.parent().parent().find("td:first > div[id^='proc']").append($("<img/>")
-            .attr("src", "imagens/sei_ciencia_pequeno.gif"));
+          $flag_ciencia = $("<img/>").attr("src", "imagens/sei_ciencia_pequeno.gif");
+          $acao_ciencia.parent().parent().find("td:first > div[id^='proc']").append($flag_ciencia);
         }
+        ws_get(wsapi.processo.listar_ciencia, null, $acao_ciencia.attr("idproc")).then(ciencias => {
+          if (ciencias.length > 0) { /** Ciência */
+            var list_ciencia = "";
+
+            ciencias.forEach(function (ciencia) {
+              list_ciencia = list_ciencia.concat(ciencia.nome, " - ", ciencia.data, "\n");
+            });
+            $flag_ciencia.attr("title", list_ciencia);
+          }
+        });
         alert("Ciência registrada para o processo");
       }).catch(err => {
         console.error(err);
