@@ -16,7 +16,7 @@ function ControleGerencial() {
       browser.storage.local.get("version").then(function (params) {
         var version = parseInt(params.version);
         if (version < 60) {
-          $("#divInfraAreaDados").append("Firefox versão: " + version + " - é necessário a versão igual ou maior que 60 do navegador.").css({backgroundColor: "red"});
+          $("#divInfraAreaDados").append("Firefox versão: " + version + " - é necessário a versão igual ou maior que 60 do navegador.").css({ backgroundColor: "red" });
         }
       }, null);
     }
@@ -127,17 +127,23 @@ function ControleGerencial() {
       /** Inclui os dados na tabela */
       var $trrow = $("<tr/>");
       /** Processo / Observação da unidade */
-      $trrow.append(
-        $("<td/>")
-          .append($("<div/>")
-            .attr("id", "proc" + processo.atributos.idProcedimento)
-            .attr("title", processo.atributos.tipoProcesso)
-            .append($("<a/>")
-              .attr("href", "controlador.php?acao=procedimento_trabalhar&id_procedimento=" + processo.id)
-              .attr("target", "_blank")
-              .text(processo.atributos.numero)))
-          .append($("<div/>").text(DadosExtras.dados.Observacao))
-      );
+      $processo_obs_unidade = $("<div/>");
+      if (DadosExtras.dados.ObservacaoOutrasUnidades.length) {
+        var obs_unidade = DadosExtras.dados.ObservacaoOutrasUnidades[DadosExtras.dados.ObservacaoOutrasUnidades.length - 1];
+        $processo_obs_unidade.text(obs_unidade.observacao).attr("title", "Observação da unidade: " + obs_unidade.unidade);
+      } else if (DadosExtras.dados.Observacao != "") {
+        $processo_obs_unidade.text(DadosExtras.dados.Observacao).attr("title", "Observação da unidade atual.");
+      }
+      var $processo = $("<td/>")
+        .append($("<div/>")
+          .attr("id", "proc" + processo.atributos.idProcedimento)
+          .attr("title", processo.atributos.tipoProcesso)
+          .append($("<a/>")
+            .attr("href", "controlador.php?acao=procedimento_trabalhar&id_procedimento=" + processo.id)
+            .attr("target", "_blank")
+            .text(processo.atributos.numero)))
+        .append($processo_obs_unidade);
+      $trrow.append($processo);
       if (DadosExtras.processo.Flags.Restrito != null) {
         $("div[id^='proc']", $trrow).append($("<img/>")
           .attr("src", "imagens/sei_chave_restrito.gif")

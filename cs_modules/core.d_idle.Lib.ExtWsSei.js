@@ -238,6 +238,7 @@ function __ProcessoConsultarDados(resp) {
       Especificacao: "",
       Interessados: [],
       Observacao: "",
+      ObservacaoOutrasUnidades: [],
       NivelAcesso: -1,
       HipoteseLegal: null
     }
@@ -252,6 +253,15 @@ function __ProcessoConsultarDados(resp) {
       DadosProcesso.Interessados.push($(this).text());
     })
     DadosProcesso.Observacao = $("#txaObservacoes", $html).text();
+    $("#divObservacoesOutras > table > tbody > tr[class]", $html).each(function (index) {
+      var observacao = {
+        index: index,
+        unidade: $(this).find("td:nth-child(1)").text(),
+        observacao: $(this).find("td:nth-child(2)").text()
+      }
+      DadosProcesso.ObservacaoOutrasUnidades.push(observacao);
+    });
+
     DadosProcesso.NivelAcesso = $("input[name='rdoNivelAcesso'][checked]", $html).val();
     if (DadosProcesso.NivelAcesso == 1) {
       var Acesso = { nome: "", valor: -1 };
