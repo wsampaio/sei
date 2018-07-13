@@ -12,6 +12,15 @@ function ControleGerencial() {
     var Marcadores = [];
     var GrupoAcompanhamentos = [];
 
+    if (!isChrome) {
+      browser.storage.local.get("version").then(function (params) {
+        var version = parseInt(params.version);
+        if (version < 60) {
+          $("#divInfraAreaDados").append("Firefox versão: " + version + " - é necessário a versão igual ou maior que 60 do navegador.").css({backgroundColor: "red"});
+        }
+      }, null);
+    }
+
     /** Pega a lista de marcadores */
     ext_ws_get(ext_wsapi.marcador.listar).then(function (marc) {
       Marcadores = marc;

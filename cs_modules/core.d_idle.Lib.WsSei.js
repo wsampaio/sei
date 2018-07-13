@@ -206,7 +206,11 @@ function ws_autenticar() {
     console.log(wsapiname + "POST " + GetBaseUrl() + modwsapi + wsapi.autenticar);
     return fetch(GetBaseUrl() + modwsapi + wsapi.autenticar, { body: JSON.stringify(data), headers: { 'content-type': 'application/json' }, method: 'POST' });
   }).then(response => response.json()).then(json => {
-    return browser.storage.local.set(JSON.parse('{"' + __storageName + '": ' + JSON.stringify(json.data) + "}")).then(() => json.data);
+    if (!json.sucesso) {
+      throw new Error("wssei: " + json.mensagem);
+    } else {
+      return browser.storage.local.set(JSON.parse('{"' + __storageName + '": ' + JSON.stringify(json.data) + "}")).then(() => json.data);
+    }
   });
 }
 
@@ -214,7 +218,9 @@ function ws_token(Validar = false) {
   return browser.storage.local.get(JSON.parse('{"' + __storageName + '": null }')).then(storageLogin => {
     var Login = Object.getOwnPropertyDescriptor(storageLogin, __storageName).value;
     if (Login == null) {
-      throw new Error("Sessao não salva: Login nulo.");
+      throw new Error("Sessao não salva: Token nulo.");
+    } else if (Login.loginData.sigla != $("#lnkUsuarioSistema").attr("title").match(/[\-\s](\w+)[?!/]/g)[0].replace("/", "").trim()) {
+      throw new Error("Sessao não salva: Token inválido.");
     } else {
       if (Validar) {
         return ws_get(wsapi.usuario.unidades, "usuario=" + Login.loginData.IdUsuario).then(() => Login);

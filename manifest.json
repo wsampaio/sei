@@ -1,12 +1,12 @@
 {
   "manifest_version": 2,
-  "name": "SEI++",
+  "name": "SEI++ (VESÃO DE TESTE)",
   "short_name": "SEI++",
   "description": "SEI++: Adiciona novas funcionalidades ao Sistema Eletrônico de Informações - SEI (Requer uma versão do SEI maior ou igual a 3.0.0).",
-  "version": "4.0",
+  "version": "4.0.99.1",
   "author": "Jonatas Evaristo",
   "homepage_url": "https://jonatasrs.github.io/sei/",
-  "icons": {"48": "icons/sei_++.png"},
+  "icons": {"48": "icons/sei_++_testing.png"},
   "permissions": ["storage"],
 
   "applications": {
