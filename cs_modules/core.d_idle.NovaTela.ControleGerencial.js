@@ -110,9 +110,9 @@ function ControleGerencial() {
       var $throw = $("<tr/>");
       $throw.append($("<th/>").text("Processo"));
       $throw.append($("<th/>").text("tipo").addClass("columnHide"));
-      $throw.append($("<th/>").text("Anotação").addClass("columnNowrap"));
-      $throw.append($("<th/>").text("Marcador").addClass("columnNowrap"));
-      $throw.append($("<th/>").text("Acompanhamento").addClass("columnNowrap"));
+      $throw.append($("<th/>").text("Anotação").addClass("columnMax150"));
+      $throw.append($("<th/>").text("Marcador").addClass("columnMax150"));
+      $throw.append($("<th/>").text("Acompanhamento").addClass("columnMax150"));
       $throw.append($("<th/>").text("Ações").addClass("columnNowrap"));
       $thead.append($throw);
     }
