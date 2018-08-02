@@ -1,3 +1,17 @@
+/** Progressbar **/
+#progressbar div.progress-label {
+  position: absolute;
+  left: 47%;
+  top: 4px;
+  font-weight: bold;
+  font-size: 12px
+}
+
+/** Tabela */
+#TabelaGR {
+  width: 100%;
+}
+
 /** Colunas **/
 .columnHide{
   display: none;

@@ -22,7 +22,7 @@ function ControleGerencial() {
     }
 
     /** Pega a lista de marcadores */
-    ext_ws_get(ext_wsapi.marcador.listar).then(function (marc) {
+    ext_ws_get(seipp_api.marcador.listar).then(function (marc) {
       Marcadores = marc;
       console.log("marcadores: ", marc);
     }).catch(console.log);
@@ -35,25 +35,43 @@ function ControleGerencial() {
 
     /** Título da nova tela */
     $("#divInfraBarraLocalizacao").text("Controle Gerencial de Processos");
-    $("#divInfraAreaDados").removeAttr("style").append('<img id="imgAguarde" src="/infra_css/imagens/aguarde.gif" />');
+    //$("#divInfraAreaDados").removeAttr("style").append('<img id="imgAguarde" src="/infra_css/imagens/aguarde.gif" />');
+    $("#divInfraAreaDados").removeAttr("style").append('<div id="progressbar"><div class="progress-label">0%</div></div>');
+    var $progressbar = $("#progressbar");
+    $progressbar.progressbar({
+      value: false,
+      change: function () {
+        console.log("change");
+        $("#progressbar div.progress-label").text($progressbar.progressbar("value") + "%");
+      },
+      complete: function () {
+        $("#progressbar div.progress-label").text("");
+      },
+      create: function () {
+        $("#progressbar div.progress-label").text("Aguarde...");
+      }
+    });
 
     TabelaCriar();
 
     /** Recuperar os dados dos processos pelo wssei */
     var dataprocessos = [];
+    var progressbar_val = 0;
     ws_token(true).catch(err => {
       console.log(err);
       return ws_autenticar();
     }).then(() => Promise.all([ws_get(wsapi.processo.listar, "tipo=R"), ws_get(wsapi.processo.listar, "tipo=G")])).then(jsons => {
       jsons.forEach((json) => dataprocessos = dataprocessos.concat(json));
       console.log(dataprocessos);
+      progressbar_val = 100.0 / dataprocessos.length;
+      console.log(progressbar_val);
       return dataprocessos.reduce(function (sequence, processo) {
         return sequence.then(function () {
           /** Pega informações extras */
-          return ext_ws_get(ext_wsapi.processo.consultar, null, processo.atributos.idProcedimento).then(function (proc) {
-            return ext_ws_get(ext_wsapi.processo.consultar_dados, proc).then(function (dados) {
-              return ext_ws_get(ext_wsapi.processo.marcador, proc).then(function (mardador) {
-                return ext_ws_get(ext_wsapi.processo.acompanhamento, proc).then(function (acompanhamento) {
+          return ext_ws_get(seipp_api.processo.consultar, null, processo.atributos.idProcedimento).then(function (proc) {
+            return ext_ws_get(seipp_api.processo.consultar_dados, proc).then(function (dados) {
+              return ext_ws_get(seipp_api.processo.marcador, proc).then(function (mardador) {
+                return ext_ws_get(seipp_api.processo.acompanhamento, proc).then(function (acompanhamento) {
                   return ws_get(wsapi.processo.listar_ciencia, null, processo.atributos.idProcedimento).then(function (ciencias) {
                     return Promise.resolve({ processo: proc, dados: dados, marcador: mardador, acompanhamento: acompanhamento, ciencias: ciencias });
                   });
@@ -62,13 +80,15 @@ function ControleGerencial() {
             });
           });
         }).then(function (DadosExtras) {
+          $progressbar.progressbar("value", $progressbar.progressbar("value") + progressbar_val);
+          console.log($progressbar.progressbar("value"));
           TabelaAdicinarProcesso(processo, DadosExtras);
         });
       }, Promise.resolve());
     }).then(function () {
       /** Adicioan a tabela na tela do sei */
       $tabela.appendTo("#divInfraAreaDados");
-      $("#imgAguarde").remove();
+      $progressbar.progressbar("destroy");
 
       /** Aplica o tablesorter */
       $tabela.tablesorter({
@@ -97,7 +117,8 @@ function ControleGerencial() {
       }).catch(console.error);
     }).catch(erro => {
       console.log(erro);
-      $("#imgAguarde").remove();
+      $progressbar.progressbar("destroy");
+      $("#progressbar div.progress-label").text("");
       $("#divInfraAreaDados").append(erro);
     });
 
@@ -235,17 +256,17 @@ function ControleGerencial() {
 
       /** Açoes */
       var $acoes = $("<td/>");
-      $acao_ciencia = $("<div/>");
+      // $acao_ciencia = $("<div/>");
       $acao_concluir = $("<div/>");
 
-      $acao_ciencia.append($("<img/>").attr("src", "imagens/sei_ciencia_pequeno.gif"))
-        .attr("idproc", processo.atributos.idProcedimento)
-        .on("click", click_acao_ciencia);
+      // $acao_ciencia.append($("<img/>").attr("src", "imagens/sei_ciencia_pequeno.gif"))
+      //   .attr("idproc", processo.atributos.idProcedimento)
+      //   .on("click", click_acao_ciencia);
       $acao_concluir.append($("<img/>").attr("src", "imagens/sei_concluir_processo.gif"))
         .attr("idproc", processo.atributos.numero)
         .on("click", click_acao_concluir);
 
-      $acoes.append($acao_ciencia).append($acao_concluir);
+      $acoes.append($acao_concluir);
       $trrow.append($acoes);
 
       /** FIM */
@@ -343,7 +364,7 @@ function ControleGerencial() {
           idProcesso: $marcador.attr("idproc"),
           texto: $textarea.val()
         }
-        ext_ws_post(ext_wsapi.processo.marcador, Marcador).then(ret => {
+        ext_ws_post(seipp_api.processo.marcador, Marcador).then(ret => {
           if (Marcador.id == "") {
             $marcador.find("#img").hide();
             $marcador.find("#text").text("");
@@ -430,7 +451,7 @@ function ControleGerencial() {
             grupo: Acompanhamento.grupo,
             observacao: Acompanhamento.observacao
           }
-          ws = ext_ws_post(ext_wsapi.processo.acompanhamento, acomp);
+          ws = ext_ws_post(seipp_api.processo.acompanhamento, acomp);
           console.log("Alterar o acompanhamento");
         }
         ws.then(ret => {
@@ -466,31 +487,31 @@ function ControleGerencial() {
       }
     }
 
-    function click_acao_ciencia() {
-      var $acao_ciencia = $(this);
-      ws_post(wsapi.processo.ciencia, null, $acao_ciencia.attr("idproc")).then(resp => {
-        /** Atualiza a flag no processo */
-        var $flag_ciencia = $acao_ciencia.parent().parent().find("td:first > div[id^='proc'] > img[src*='sei_ciencia_pequeno']");
-        if ($flag_ciencia.length == 0) {
-          $flag_ciencia = $("<img/>").attr("src", "imagens/sei_ciencia_pequeno.gif");
-          $acao_ciencia.parent().parent().find("td:first > div[id^='proc']").append($flag_ciencia);
-        }
-        ws_get(wsapi.processo.listar_ciencia, null, $acao_ciencia.attr("idproc")).then(ciencias => {
-          if (ciencias.length > 0) { /** Ciência */
-            var list_ciencia = "";
+    // function click_acao_ciencia() {
+    //   var $acao_ciencia = $(this);
+    //   ws_post(wsapi.processo.ciencia, null, $acao_ciencia.attr("idproc")).then(resp => {
+    //     /** Atualiza a flag no processo */
+    //     var $flag_ciencia = $acao_ciencia.parent().parent().find("td:first > div[id^='proc'] > img[src*='sei_ciencia_pequeno']");
+    //     if ($flag_ciencia.length == 0) {
+    //       $flag_ciencia = $("<img/>").attr("src", "imagens/sei_ciencia_pequeno.gif");
+    //       $acao_ciencia.parent().parent().find("td:first > div[id^='proc']").append($flag_ciencia);
+    //     }
+    //     ws_get(wsapi.processo.listar_ciencia, null, $acao_ciencia.attr("idproc")).then(ciencias => {
+    //       if (ciencias.length > 0) { /** Ciência */
+    //         var list_ciencia = "";
 
-            ciencias.forEach(function (ciencia) {
-              list_ciencia = list_ciencia.concat(ciencia.nome, " - ", ciencia.data, "\n");
-            });
-            $flag_ciencia.attr("title", list_ciencia);
-          }
-        });
-        alert("Ciência registrada para o processo");
-      }).catch(err => {
-        console.error(err);
-        alert(err);
-      });
-    }
+    //         ciencias.forEach(function (ciencia) {
+    //           list_ciencia = list_ciencia.concat(ciencia.nome, " - ", ciencia.data, "\n");
+    //         });
+    //         $flag_ciencia.attr("title", list_ciencia);
+    //       }
+    //     });
+    //     alert("Ciência registrada para o processo");
+    //   }).catch(err => {
+    //     console.error(err);
+    //     alert(err);
+    //   });
+    // }
     function click_acao_concluir() {
       var $acao_concluir = $(this);
       var nprocesso = $acao_concluir.attr("idproc");

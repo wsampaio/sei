@@ -2,25 +2,29 @@
  * Métodos não suportados no múdulo de webservice do sei:
  * core.d_idle.Lib.WsSei.js
  */
-const ext_wsapiname = "WebService_Sei++: ";
-var ext_wsapi = {
+const seipp_api_name = "Sei++_API: ";
+var seipp_api = {
   processo: {
     consultar: "__ProcessoConsultar",
     consultar_dados: "procedimento_alterar",
     marcador: "andamento_marcador_gerenciar",
     acompanhamento: "acompanhamento_cadastrar",
-    acomapnhamento_excluir: "acompanhamento_cadastrar"
+    acompanhamento_excluir: "acompanhamento_cadastrar"
   },
   marcador: {
     listar: "marcador_listar"
-
   }
 }
 
+/**
+ * Api POST (Criar/Alterar/Excluir)
+ * @param {*} apirest
+ * @param {*} json_data
+ */
 function ext_ws_post(apirest, json_data) {
-  if (__isInGroup(ext_wsapi, apirest)) {
-    if (__isInGroup(ext_wsapi.processo, apirest)) {
-      return ext_ws_get(ext_wsapi.processo.consultar, null, json_data.idProcesso).then(proc => {
+  if (__isInGroup(seipp_api, apirest)) {
+    if (__isInGroup(seipp_api.processo, apirest)) {
+      return ext_ws_get(seipp_api.processo.consultar, null, json_data.idProcesso).then(proc => {
         /** Pega o link para buscar os dados */
         var link = proc.LinkComandos.reduce((acc, cur, i) => {
           if (cur.indexOf(apirest) != -1) acc = cur;
@@ -41,16 +45,17 @@ function ext_ws_post(apirest, json_data) {
       }).then(resp => {
         /** Trata a resposta de acordo com a api */
         switch (apirest) {
-          case ext_wsapi.processo.marcador:
+          case seipp_api.processo.marcador:
             return __ProcessoCadastrarMarcador(resp, json_data);
-          case ext_wsapi.processo.acompanhamento:
+          case seipp_api.processo.acompanhamento:
             return __ProcessoAcompanhamentoCadastrarAlterar(resp, json_data);
           default:
-            return Promise.reject(ext_wsapiname + ": Api não implementada");
+            return Promise.reject(seipp_api_name + ": Api não implementada");
         }
       }).then(post => {
         /** Envia o post da requisição */
-        console.log(ext_wsapiname + "POST " + apirest + " > " + post.url, post.data);
+        console.log(seipp_api_name + "POST " + apirest + " > " + post.url, post.data);
+        post.data = escape(post.data.replace(/\s/g, "+"));
         return fetch(post.url, {
           body: JSON.stringify(post.data),
           headers: { 'content-type': 'application/x-www-form-urlencoded' },
@@ -72,9 +77,9 @@ function ext_ws_post(apirest, json_data) {
 function ext_ws_get(apirest, params = null, id_url = null) {
   return Promise.resolve().then(() => {
     var link = "";
-    if (__isInGroup(ext_wsapi, apirest)) {
-      if (__isInGroup(ext_wsapi.processo, apirest)) {
-        if (apirest == ext_wsapi.processo.consultar) {
+    if (__isInGroup(seipp_api, apirest)) {
+      if (__isInGroup(seipp_api.processo, apirest)) {
+        if (apirest == seipp_api.processo.consultar) {
           if (params != null && params != "") {
             link = params;
           } else if (id_url != null) {
@@ -93,7 +98,7 @@ function ext_ws_get(apirest, params = null, id_url = null) {
             //   var resp = {msg: null, ok: true, headers: new Headers({ "content-type": "wsapi" }) };
             //   return resp;
             default:
-              throw new Error(ext_wsapiname + ": Link de comando do processo não encontrado: " + apirest);
+              throw new Error(seipp_api_name + ": Link de comando do processo não encontrado: " + apirest);
           }
         }
       } else { /** comandos do menu */
@@ -103,7 +108,7 @@ function ext_ws_get(apirest, params = null, id_url = null) {
       throw new Error("Api não implementada: " + apirest);
     }
     /** Execulta a consulta */
-    console.log(ext_wsapiname + "GET " + apirest + " > " + link);
+    console.log(seipp_api_name + "GET " + apirest + " > " + link);
     return fetch(link, { method: 'GET' });
   }).then(function (response) {
     var contentType = response.headers.get("content-type");
@@ -118,15 +123,15 @@ function ext_ws_get(apirest, params = null, id_url = null) {
     }
   }).then(function (resp) {
     switch (apirest) {
-      case ext_wsapi.processo.consultar:
+      case seipp_api.processo.consultar:
         return __ProcessoConsultar(resp);
-      case ext_wsapi.processo.consultar_dados:
+      case seipp_api.processo.consultar_dados:
         return __ProcessoConsultarDados(resp);
-      case ext_wsapi.processo.marcador:
+      case seipp_api.processo.marcador:
         return __ProcessoConsultarMarcador(resp);
-      case ext_wsapi.processo.acompanhamento:
+      case seipp_api.processo.acompanhamento:
         return __ProcessoAcompanhamentoConsultar(resp);
-      case ext_wsapi.marcador.listar:
+      case seipp_api.marcador.listar:
         return __MarcadorListar(resp);
       default:
         throw new Error("Api não implementada");
@@ -167,7 +172,7 @@ function __ProcessoConsultar(resp) {
     var linkArvore = $("#ifrArvore", $html).attr("src");
     if (linkArvore != undefined) {
       linkArvore = GetBaseUrl() + linkArvore;
-      resolve(ext_ws_get(ext_wsapi.processo.consultar, linkArvore));
+      resolve(ext_ws_get(seipp_api.processo.consultar, linkArvore));
     } else {
       /** Pega os links dos camandos do processo */
       var x = resp.indexOf("Nos[0].acoes");
@@ -343,7 +348,6 @@ function __ProcessoCadastrarMarcador(resp, json_data) {
         post.data = post.data + val;
       }
     });
-    post.data = encodeURI(post.data.replace(/\s/g, "+"));
     resolve(post);
   });
 }
@@ -412,7 +416,6 @@ function __ProcessoAcompanhamentoCadastrarAlterar(resp, json_data) {
         }
       }
     });
-    post.data = encodeURI(post.data.replace(/\s/g, "+"));
     resolve(post);
   });
 }
