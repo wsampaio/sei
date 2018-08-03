@@ -12,30 +12,12 @@ function ControleGerencial() {
     var Marcadores = [];
     var GrupoAcompanhamentos = [];
 
-    if (!isChrome) {
-      browser.storage.local.get("version").then(function (params) {
-        var version = parseInt(params.version);
-        if (version < 60) {
-          $("#divInfraAreaDados").append("Firefox versão: " + version + " - é necessário a versão igual ou maior que 60 do navegador.").css({ backgroundColor: "red" });
-        }
-      }, null);
-    }
-
-    /** Pega a lista de marcadores */
-    ext_ws_get(seipp_api.marcador.listar).then(function (marc) {
-      Marcadores = marc;
-      console.log("marcadores: ", marc);
-    }).catch(console.log);
-
-    /** Pega a lista de marcadores */
-    ws_get(wsapi.grupoacompanhamento.listar).then(function (grupoacomp) {
-      GrupoAcompanhamentos = grupoacomp;
-      console.log("marcadores: ", GrupoAcompanhamentos);
-    }).catch(console.log);
+    /** Recuperar os dados dos processos pelo wssei */
+    var dataprocessos = [];
+    var progressbar_val = 0;
 
     /** Título da nova tela */
     $("#divInfraBarraLocalizacao").text("Controle Gerencial de Processos");
-    //$("#divInfraAreaDados").removeAttr("style").append('<img id="imgAguarde" src="/infra_css/imagens/aguarde.gif" />');
     $("#divInfraAreaDados").removeAttr("style").append('<div id="progressbar"><div class="progress-label">0%</div></div>');
     var $progressbar = $("#progressbar");
     $progressbar.progressbar({
@@ -52,19 +34,48 @@ function ControleGerencial() {
       }
     });
 
-    TabelaCriar();
+    /** Verifica a versão mínima do navegador */
+    if (!isChrome) {
+      browser.storage.local.get("version").then(function (params) {
+        var version = parseInt(params.version);
+        if (version < 60) {
+          $("#divInfraAreaDados").append("Firefox versão: " + version + " - é necessário a versão igual ou maior que 60 do navegador.").css({ backgroundColor: "red" });
+        }
+      }, null);
+    }
 
-    /** Recuperar os dados dos processos pelo wssei */
-    var dataprocessos = [];
-    var progressbar_val = 0;
-    ws_token(true).catch(err => {
-      console.log(err);
-      return ws_autenticar();
+    /** Verifica se o WebService do SEI está ativo */
+    ws_get(wsapi.orgao.listar).then(function () {
+      /** Pega a lista de marcadores */
+      ext_ws_get(seipp_api.marcador.listar).then(function (marc) {
+        Marcadores = marc;
+        console.log("marcadores: ", marc);
+      }).catch(console.log);
+
+      /** Pega a lista de marcadores */
+      ws_get(wsapi.grupoacompanhamento.listar).then(function (grupoacomp) {
+        GrupoAcompanhamentos = grupoacomp;
+        console.log("marcadores: ", GrupoAcompanhamentos);
+      }).catch(console.log);
+
+      TabelaCriar();
+      return ws_token(true);
+    }).catch(err => {
+      console.log(err.message);
+      if (err.message.indexOf("Módulo inativo") != -1) {
+        return Promise.reject(err);
+      } else {
+        return ws_autenticar();
+      }
     }).then(() => Promise.all([ws_get(wsapi.processo.listar, "tipo=R"), ws_get(wsapi.processo.listar, "tipo=G")])).then(jsons => {
       jsons.forEach((json) => dataprocessos = dataprocessos.concat(json));
       console.log(dataprocessos);
-      progressbar_val = 100.0 / dataprocessos.length;
-      console.log(progressbar_val);
+      if (dataprocessos.length == 0) {
+        $progressbar.progressbar("value", 100);
+      } else {
+        progressbar_val = 100.0 / dataprocessos.length;
+        console.log(progressbar_val);
+      }
       return dataprocessos.reduce(function (sequence, processo) {
         return sequence.then(function () {
           /** Pega informações extras */
@@ -119,7 +130,11 @@ function ControleGerencial() {
       console.log(erro);
       $progressbar.progressbar("destroy");
       $("#progressbar div.progress-label").text("");
-      $("#divInfraAreaDados").append(erro);
+      if (erro.message.indexOf("Módulo inativo") != -1) {
+        $("#divInfraAreaDados").append(erro.toString() + " Esta funcionalidade necessita que o módulo WebService esteja ativo.");
+      } else {
+        $("#divInfraAreaDados").append(erro);
+      }
     });
 
     /**  */

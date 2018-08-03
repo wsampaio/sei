@@ -202,7 +202,19 @@ function ws_loginGui() {
 }
 
 function ws_autenticar() {
-  return ws_loginGui().then(data => {
+  return Promise.resolve().then(function () {
+    if (window.location.pathname == "/sip/login.php") {
+      return Promise.resolve({
+        usuario: $("#txtUsuario").val(),
+        senha: $("#pwdSenha").val(),
+        contexto: "",
+        orgao: $("#selOrgao").val(),
+        siglaorgao: $("#selOrgao > option[selected]").text(),
+      });
+    } else {
+      return ws_loginGui();
+    }
+  }).then(data => {
     console.log(wsapiname + "POST " + GetBaseUrl() + modwsapi + wsapi.autenticar);
     return fetch(GetBaseUrl() + modwsapi + wsapi.autenticar, { body: JSON.stringify(data), headers: { 'content-type': 'application/json' }, method: 'POST' });
   }).then(response => response.json()).then(json => {
@@ -267,7 +279,13 @@ function ws_get(apirest, params = null, id_url = null) {
       return Promise.reject("Necessário informar o id: " + urlapi.match(/\{\w+\}/g));
     }
   }
-  return ws_token().then(function (Login) {
+  return Promise.resolve().then( function (){
+    if (apirest == wsapi.orgao.listar) {
+      return Promise.resolve( {Login: {token: ""}});
+    } else {
+      return ws_token();
+    }
+  }).then(function (Login) {
     console.log(wsapiname + "GET " + urlapi);
     return fetch(urlapi, {
       headers: { 'content-type': 'application/json', 'token': Login.token },
@@ -278,7 +296,6 @@ function ws_get(apirest, params = null, id_url = null) {
     if (json.sucesso) {
       if (json.data == undefined) { return []; } else { return json.data; }
     } else {
-      console.log(json);
       return Promise.reject(Error(json.mensagem));
     }
   });
