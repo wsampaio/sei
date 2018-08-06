@@ -46,23 +46,23 @@ function ext_ws_post(apirest, json_data) {
         /** Trata a resposta de acordo com a api */
         switch (apirest) {
           case seipp_api.processo.marcador:
-            return __ProcessoCadastrarMarcador(resp, json_data);
+            return __ProcessoCadastrarMarcador_Post(resp, json_data);
           case seipp_api.processo.acompanhamento:
-            return __ProcessoAcompanhamentoCadastrarAlterar(resp, json_data);
+            return __ProcessoAcompanhamentoCadastrarAlterar_Post(resp, json_data);
           default:
             return Promise.reject(seipp_api_name + ": Api não implementada");
         }
       }).then(post => {
         /** Envia o post da requisição */
         console.log(seipp_api_name + "POST " + apirest + " > " + post.url, post.data);
-        post.data = escape(post.data.replace(/\s/g, "+"));
+        post.data = postEncodeURI(post.data);
         return fetch(post.url, {
           body: JSON.stringify(post.data),
           headers: { 'content-type': 'application/x-www-form-urlencoded' },
           method: 'POST'
         });
       }).then(resp => {
-        if (resp.ok) {
+        if (resp.redirected && resp.ok) {
           return json_data;
         } else {
           return Promise.reject(resp);
@@ -72,6 +72,21 @@ function ext_ws_post(apirest, json_data) {
   } else {
     reject(Error("Api não implementada: " + apirest));
   }
+}
+
+/**
+ * Encore raw data post.
+ * @param {object} data Objeto com os dados post.
+ */
+function postEncodeURI(data) {
+  var postdata = "";
+
+  for (const name in data) {
+    const value = data[name];
+    if (postdata != "") { postdata = postdata + "&" }
+    postdata = postdata + name + "=" + escape(value.replace(/\s/g, "+"))
+  }
+  return postdata
 }
 
 function ext_ws_get(apirest, params = null, id_url = null) {
@@ -329,23 +344,28 @@ var post = {
   url: "",
   data: ""
 }*/
-function __ProcessoCadastrarMarcador(resp, json_data) {
+function __ProcessoCadastrarMarcador_Post(resp, json_data) {
   return new Promise((resolve, reject) => {
+    var excludes = ["selMarcador"];
     var $html = $($.parseHTML(resp));
-    var post = { url: "", data: "" };
+    var post = { url: "", data: {} };
     post.url = GetBaseUrl() + $("#frmGerenciarMarcador", $html).attr("action");
 
     $("#frmGerenciarMarcador [name]", $html).each(function () {
       var name = $(this).attr("name");
       var val = $(this).val();
-      post.data = post.data + (post.data == "" ? "" : "&");
-      post.data = post.data + name + "=";
-      if (name == "hdnIdMarcador") {
-        post.data = post.data + json_data.id;
-      } else if (name == "txaTexto") {
-        post.data = post.data + json_data.texto;
-      } else {
-        post.data = post.data + val;
+      if (excludes.find(n => n == name) == undefined && val != undefined) {
+        switch (name) {
+          case "hdnIdMarcador":
+            post.data[name] = json_data.id;
+            break;
+          case "txaTexto":
+            post.data[name] = json_data.texto;
+            break;
+          default:
+            post.data[name] = val;
+            break;
+        }
       }
     });
     resolve(post);
@@ -384,8 +404,9 @@ var acompanhamento = {
   grupo: null,
   observacao: ""
 }
-function __ProcessoAcompanhamentoCadastrarAlterar(resp, json_data) {
+function __ProcessoAcompanhamentoCadastrarAlterar_Post(resp, json_data) {
   return new Promise((resolve, reject) => {
+    var excludes = ["btnExcluir"];
     var $html = $($.parseHTML(resp));
     var post = { url: "", data: "" };
     post.url = GetBaseUrl() + $("#frmAcompanhamentoCadastro", $html).attr("action");
@@ -393,25 +414,23 @@ function __ProcessoAcompanhamentoCadastrarAlterar(resp, json_data) {
     $("#frmAcompanhamentoCadastro [name]", $html).each(function () {
       var name = $(this).attr("name");
       var val = $(this).val();
-      var excludes = ["btnExcluir"];
+
       if (excludes.find(n => n == name) == undefined && val != undefined) {
-        post.data = post.data + (post.data == "" ? "" : "&");
-        post.data = post.data + name + "=";
         switch (name) {
           case "txaObservacao":
-            post.data = post.data + json_data.observacao;
+            post.data[name] = json_data.observacao;
             break;
           case "selGrupoAcompanhamento":
-            post.data = post.data + json_data.grupo;
+            post.data[name] = json_data.grupo;
             break;
           case "hdnIdAcompanhamento":
-            post.data = post.data + json_data.id;
+            post.data[name] = json_data.id;
             break;
           case "hdnIdProcedimento":
-            post.data = post.data + json_data.idProcesso;
+            post.data[name] = json_data.idProcesso;
             break;
           default:
-            post.data = post.data + val;
+            post.data[name] = val;
             break;
         }
       }

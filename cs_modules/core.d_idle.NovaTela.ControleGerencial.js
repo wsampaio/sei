@@ -235,13 +235,17 @@ function ControleGerencial() {
       $trrow.append($tdanotacao);
 
       /** (Marcador) Despacho da autoridade */
-      var $marcador = $("<td/>").attr("idproc", processo.atributos.idProcedimento);
+      var $marcador = $("<div/>").addClass("marcador").attr("idproc", processo.atributos.idProcedimento);
+      var $novo_marcador = $("<div/>").addClass("centralizado").append("<button/>");
+      var $tdmarcador = $("<td/>").attr("id", "tdmarcador").append($marcador, $novo_marcador);
+
       $marcador.append($("<div/>").attr("id", "img")
         .append($("<img/>"))
         .append($("<label/>"))
       );
       $marcador.append($("<div/>").attr("id", "text"));
       if (DadosExtras.processo.Flags.Marcador.Nome != null) {
+        $novo_marcador.hide();
         $marcador.find("#img > img")
           .attr("src", "imagens/marcador_" + DadosExtras.processo.Flags.Marcador.Cor + ".png")
           .attr("title", DadosExtras.processo.Flags.Marcador.Nome);
@@ -250,9 +254,17 @@ function ControleGerencial() {
         $marcador.find("#text").text(DadosExtras.marcador.texto);
       } else {
         $marcador.find("#img").hide();
+        $marcador.hide();
       }
+      $("button", $novo_marcador).button({ icon: "ui-icon-plus" }).on("click", () => {
+        if (Marcadores.length > 0) {
+          $marcador.trigger("dblclick");
+        } else {
+          alert("Não existem marcadores para adicionar!");
+        }
+      });
       $marcador.on("dblclick", dblclick_marcador);
-      $trrow.append($marcador);
+      $trrow.append($tdmarcador);
 
       /** Acompanhamento Especial */
       var $acompanhamento = $("<td/>").attr("idproc", processo.atributos.idProcedimento)
@@ -396,10 +408,12 @@ function ControleGerencial() {
           texto: $textarea.val()
         }
         ext_ws_post(seipp_api.processo.marcador, Marcador).then(ret => {
-          if (Marcador.id == "") {
+          if (Marcador.id == "") { /** Remover o marcador */
             $marcador.find("#img").hide();
             $marcador.find("#text").text("");
-          } else {
+            $marcador.hide();
+            $("div.centralizado", $marcador.parent()).show();
+          } else { /** Adicionar/Alterar o marcador */
             var m = Marcadores.find(m => m.id == Marcador.id);
             $marcador.find("#img > img")
               .attr("src", "imagens/marcador_" + m.cor + ".png")
@@ -410,16 +424,18 @@ function ControleGerencial() {
             $marcador.find("#text").text(Marcador.texto);
 
             /** Atualiza a flag no processo */
-            var $flag_marcador = $marcador.parent().find("td:first > div[id^='proc'] > img[src*='imagens/marcador_']");
-            if ($flag_marcador.length == 0) {
-              $marcador.parent().find("td:first > div[id^='proc']").append($("<img/>")
-                .attr("src", "imagens/marcador_" + m.cor + ".png")
-                .attr("title", m.nome));
-            } else {
-              $flag_marcador.attr("src", "imagens/marcador_" + m.cor + ".png")
-                .attr("title", m.nome);
-            }
+            // var $flag_marcador = $marcador.parent().find("td:first > div[id^='proc'] > img[src*='imagens/marcador_']");
+            // if ($flag_marcador.length == 0) {
+            //   $marcador.parent().find("td:first > div[id^='proc']").append($("<img/>")
+            //     .attr("src", "imagens/marcador_" + m.cor + ".png")
+            //     .attr("title", m.nome));
+            // } else {
+            //   $flag_marcador.attr("src", "imagens/marcador_" + m.cor + ".png")
+            //     .attr("title", m.nome);
+            // }
           }
+          $marcador.show();
+          $("div.centralizado", $marcador.parent()).hide();
           $dialog.dialog("close");
         }).catch(function (err) {
           console.log(err);
