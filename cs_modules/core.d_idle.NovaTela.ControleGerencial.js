@@ -218,13 +218,21 @@ function ControleGerencial() {
       $trrow.append($("<td/>").text(processo.atributos.tipoProcesso).addClass("columnHide"));
 
       /** (Anotação) Sugestão de encaminhamento */
-      var $anotacao = $("<td/>").attr("idproc", processo.atributos.idProcedimento).attr("prioridade", false);
+      var $anotacao = $("<div/>").addClass("anotacao").attr("idproc", processo.atributos.idProcedimento);
+      var $nova_anotacao = $("<div/>").addClass("centralizado").append("<button/>");
+      var $tdanotacao = $("<td/>").attr("id", "tdanotacao").append($anotacao, $nova_anotacao);
+
       if (processo.atributos.anotacoes.length > 0) {
+        $nova_anotacao.hide();
         $anotacao.text(processo.atributos.anotacoes[0].descricao)
           .attr("prioridade", processo.atributos.anotacoes[0].sinPrioridade == "S" ? true : false);
+      } else {
+        $anotacao.hide();
       }
+
+      $("button", $nova_anotacao).button({ icon: "ui-icon-plus" }).on("click", () => $anotacao.trigger("dblclick"));
       $anotacao.on("dblclick", dblclick_anotacao);
-      $trrow.append($anotacao);
+      $trrow.append($tdanotacao);
 
       /** (Marcador) Despacho da autoridade */
       var $marcador = $("<td/>").attr("idproc", processo.atributos.idProcedimento);
@@ -319,6 +327,14 @@ function ControleGerencial() {
                 $anotacao.attr("prioridade", true);
               } else {
                 $anotacao.attr("prioridade", false);
+              }
+              if ($anotacao.text() == "") {
+                $anotacao.removeAttr("prioridade");
+                $anotacao.hide();
+                $("div.centralizado", $anotacao.parent()).show();
+              } else {
+                $anotacao.show();
+                $("div.centralizado", $anotacao.parent()).hide();
               }
               $dialog.dialog("close");
             }).catch(function (err) {

@@ -1,3 +1,9 @@
+.centralizado {
+  text-align: center;
+  vertical-align: middle;
+  height: 100%;
+}
+
 /** Progressbar **/
 #progressbar div.progress-label {
   position: absolute;
@@ -54,10 +60,20 @@
 }
 
 /** Anotação **/
-#TabelaGR > tbody > tr > td[prioridade='true']:not(:empty)  {
+#tdanotacao {
+  position: relative;
+  padding: 0px;
+  height: 100%;
+}
+.anotacao {
+  position: absolute;
+  height: 100%;
+  width: 100%;
+}
+.anotacao[prioridade='true'] {
   background-color: rgb(252, 70, 70);
 }
-#TabelaGR > tbody > tr > td[prioridade='false']:not(:empty) {
+.anotacao[prioridade='false'] {
   background-color: rgb(234, 230, 114);
 }
 
