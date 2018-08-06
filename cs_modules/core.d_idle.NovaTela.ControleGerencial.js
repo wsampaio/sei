@@ -408,9 +408,14 @@ function ControleGerencial() {
           texto: $textarea.val()
         }
         ext_ws_post(seipp_api.processo.marcador, Marcador).then(ret => {
+          $throw = $marcador.parent().parent();
           if (Marcador.id == "") { /** Remover o marcador */
             $marcador.find("#img").hide();
             $marcador.find("#text").text("");
+
+            /** Remove o flag */
+            $throw.find("td:first > div[id^='proc'] > img[src*='imagens/marcador_']").remove();
+
             $marcador.hide();
             $("div.centralizado", $marcador.parent()).show();
           } else { /** Adicionar/Alterar o marcador */
@@ -424,18 +429,19 @@ function ControleGerencial() {
             $marcador.find("#text").text(Marcador.texto);
 
             /** Atualiza a flag no processo */
-            // var $flag_marcador = $marcador.parent().find("td:first > div[id^='proc'] > img[src*='imagens/marcador_']");
-            // if ($flag_marcador.length == 0) {
-            //   $marcador.parent().find("td:first > div[id^='proc']").append($("<img/>")
-            //     .attr("src", "imagens/marcador_" + m.cor + ".png")
-            //     .attr("title", m.nome));
-            // } else {
-            //   $flag_marcador.attr("src", "imagens/marcador_" + m.cor + ".png")
-            //     .attr("title", m.nome);
-            // }
+            var $flag_marcador = $throw.find("td:first > div[id^='proc'] > img[src*='imagens/marcador_']");
+            if ($flag_marcador.length == 0) {
+              $throw.find("td:first > div[id^='proc']").append($("<img/>")
+                .attr("src", "imagens/marcador_" + m.cor + ".png")
+                .attr("title", m.nome));
+            } else {
+              $flag_marcador.attr("src", "imagens/marcador_" + m.cor + ".png")
+                .attr("title", m.nome);
+            }
+
+            $marcador.show();
+            $("div.centralizado", $marcador.parent()).hide();
           }
-          $marcador.show();
-          $("div.centralizado", $marcador.parent()).hide();
           $dialog.dialog("close");
         }).catch(function (err) {
           console.log(err);

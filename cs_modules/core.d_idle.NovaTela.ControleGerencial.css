@@ -65,9 +65,8 @@
   padding: 0px;
   height: 100%;
 }
-.anotacao { padding: 3px }
 .anotacao {
-  position: absolute;
+  display: table;
   height: 100%;
   width: 100%;
 }
