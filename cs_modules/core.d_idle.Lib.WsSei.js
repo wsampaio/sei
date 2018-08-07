@@ -286,7 +286,7 @@ function ws_get(apirest, params = null, id_url = null) {
     if (id_url != null) {
       urlapi = urlapi.replace(/\{\w+\}/g, id_url);
     } else {
-      return Promise.reject("Necessário informar o id: " + urlapi.match(/\{\w+\}/g));
+      return Promise.reject(wsapiname + "Necessário informar o id: " + urlapi.match(/\{\w+\}/g) + " > apirest");
     }
   }
   return Promise.resolve().then( function (){

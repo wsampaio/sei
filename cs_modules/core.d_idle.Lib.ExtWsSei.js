@@ -8,8 +8,7 @@ var seipp_api = {
     consultar: "__ProcessoConsultar",
     consultar_dados: "procedimento_alterar",
     marcador: "andamento_marcador_gerenciar",
-    acompanhamento: "acompanhamento_cadastrar",
-    acompanhamento_excluir: "acompanhamento_cadastrar"
+    acompanhamento: "acompanhamento_cadastrar"
   },
   marcador: {
     listar: "marcador_listar"
@@ -408,8 +407,16 @@ function __ProcessoAcompanhamentoCadastrarAlterar_Post(resp, json_data) {
   return new Promise((resolve, reject) => {
     var excludes = ["btnExcluir"];
     var $html = $($.parseHTML(resp));
-    var post = { url: "", data: "" };
-    post.url = GetBaseUrl() + $("#frmAcompanhamentoCadastro", $html).attr("action");
+    var post = { url: "", data: {} };
+    if (isUndefined(json_data.excluir, false)) {
+      var x, y;
+      x = resp.indexOf("controlador.php?acao=acompanhamento_excluir");
+      y = resp.indexOf("'",x);
+      post.url = GetBaseUrl() + resp.substring(x, y);
+      excludes.push("sbmAlterarAcompanhamento");
+    } else {
+      post.url = GetBaseUrl() + $("#frmAcompanhamentoCadastro", $html).attr("action");
+    }
 
     $("#frmAcompanhamentoCadastro [name]", $html).each(function () {
       var name = $(this).attr("name");
@@ -418,16 +425,16 @@ function __ProcessoAcompanhamentoCadastrarAlterar_Post(resp, json_data) {
       if (excludes.find(n => n == name) == undefined && val != undefined) {
         switch (name) {
           case "txaObservacao":
-            post.data[name] = json_data.observacao;
+            post.data[name] = isUndefined(json_data.observacao, val);
             break;
           case "selGrupoAcompanhamento":
-            post.data[name] = json_data.grupo;
+            post.data[name] = isUndefined(json_data.grupo, val);
             break;
           case "hdnIdAcompanhamento":
-            post.data[name] = json_data.id;
+            post.data[name] = isUndefined(json_data.id, val);
             break;
           case "hdnIdProcedimento":
-            post.data[name] = json_data.idProcesso;
+            post.data[name] = isUndefined(json_data.idProcesso, val);
             break;
           default:
             post.data[name] = val;

@@ -147,3 +147,12 @@ function EsperaCarregar(Modlog, ElemRaiz, Elem, func, TimeOut = 3000) {
 function AnimacaoFade(Elem) {
   $(Elem).fadeOut(200).fadeIn(200);
 }
+
+/**
+ * Verifica se a propriedade de um objeto está definida. Caso não retorna o valor alternativo.
+ * @param {*} Variable Propriedade de um objeto.
+ * @param {*} DefaultValue Valor padrão de retorno caso undefined.
+ */
+function isUndefined(Variable, DefaultValue) {
+  return Variable == undefined ? DefaultValue : Variable;
+}
