@@ -321,38 +321,7 @@ function ControleGerencial() {
       $dialog = $dialog.dialog({
         autoOpen: false, height: 270, width: 275, modal: true, resizable: false,
         buttons: {
-          Salvar: function () {
-            ws_token().then(Login => {
-              var data = {
-                descricao: $dialog.find("textarea").val(),
-                protocolo: $anotacao.attr("idproc"),
-                unidade: Login.loginData.IdUnidadeAtual,
-                usuario: Login.loginData.IdUsuario,
-                prioridade: $dialog.find("input").prop("checked") ? "S" : "N"
-              };
-              console.log($dialog.find("input[checked]"));
-              return ws_post(wsapi.anotacao, data);
-            }).then(function (params) {
-              console.log(params);
-              $anotacao.text($dialog.find("textarea").val());
-              if ($dialog.find("input").prop("checked")) {
-                $anotacao.attr("prioridade", true);
-              } else {
-                $anotacao.attr("prioridade", false);
-              }
-              if ($anotacao.text() == "") {
-                $anotacao.removeAttr("prioridade");
-                $anotacao.hide();
-                $("div.centralizado", $anotacao.parent()).show();
-              } else {
-                $anotacao.show();
-                $("div.centralizado", $anotacao.parent()).hide();
-              }
-              $dialog.dialog("close");
-            }).catch(function (err) {
-              alert(err);
-            });
-          },
+          Salvar: Salvar,
           Cancelar: function () {
             $dialog.dialog("close");
           }
@@ -363,6 +332,39 @@ function ControleGerencial() {
         }
       });
       $dialog.dialog("open");
+
+      function Salvar() {
+        ws_token().then(Login => {
+          var data = {
+            descricao: $dialog.find("textarea").val(),
+            protocolo: $anotacao.attr("idproc"),
+            unidade: Login.loginData.IdUnidadeAtual,
+            usuario: Login.loginData.IdUsuario,
+            prioridade: $dialog.find("input").prop("checked") ? "S" : "N"
+          };
+          console.log($dialog.find("input[checked]"));
+          return ws_post(wsapi.anotacao, data);
+        }).then(function (params) {
+          console.log(params);
+          $anotacao.text($dialog.find("textarea").val());
+          if ($dialog.find("input").prop("checked")) {
+            $anotacao.attr("prioridade", true);
+          } else {
+            $anotacao.attr("prioridade", false);
+          }
+          if ($anotacao.text() == "") {
+            $anotacao.removeAttr("prioridade");
+            $anotacao.hide();
+            $("div.centralizado", $anotacao.parent()).show();
+          } else {
+            $anotacao.show();
+            $("div.centralizado", $anotacao.parent()).hide();
+          }
+          $dialog.dialog("close");
+        }).catch(function (err) {
+          alert(err);
+        });
+      }
     }
 
     function dblclick_marcador() {
