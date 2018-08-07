@@ -466,7 +466,11 @@ function __MarcadorListar(resp) {
       });
       resolve(marcadores);
     } else {
-      reject("Não existem marcadores");
+      if ($("#divInfraAreaTabela", $html).length == 1) {
+        resolve(marcadores);
+      } else {
+        reject(seipp_api_name + "Erro ao listar marcadores");
+      }
     }
   });
 }

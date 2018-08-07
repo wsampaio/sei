@@ -48,58 +48,61 @@ function ControleGerencial() {
     ws_get(wsapi.orgao.listar).then(() => ws_token(true)).catch(err => {
       console.log(err.message);
       if (err.message.indexOf("Módulo inativo") != -1) {
+        /** Modulo inativo no sei: 1º requisição */
         return Promise.reject(err);
       } else {
+        /** Erro na autenticação: 2º requisição */
         return ws_autenticar();
       }
     }).then(Login => {
       TabelaCriar();
 
-      /** Pega a lista de marcadores */
-      ext_ws_get(seipp_api.marcador.listar).then(function (marc) {
-        Marcadores = marc;
-        console.log("marcadores: ", marc);
-      }).catch(console.log);
-
-      /** Pega a lista de acompanhamento especial */
-      ws_get(wsapi.grupoacompanhamento.listar, null, Login.loginData.IdUnidadeAtual).then(function (grupoacomp) {
-        GrupoAcompanhamentos = grupoacomp;
-        console.log("GrupoAcompanhamentos: ", GrupoAcompanhamentos);
-      }).catch(console.error);
-      console.log(Login);
-
-      return Promise.resolve();
-    }).then(() => Promise.all([ws_get(wsapi.processo.listar, "tipo=R"), ws_get(wsapi.processo.listar, "tipo=G")])).then(jsons => {
-      jsons.forEach((json) => dataprocessos = dataprocessos.concat(json));
-      console.log(dataprocessos);
-      if (dataprocessos.length == 0) {
-        $progressbar.progressbar("value", 100);
-      } else {
-        progressbar_val = 100.0 / dataprocessos.length;
-        console.log(progressbar_val);
-      }
-      return dataprocessos.reduce(function (sequence, processo) {
-        return sequence.then(function () {
-          /** Pega informações extras */
-          return ext_ws_get(seipp_api.processo.consultar, null, processo.atributos.idProcedimento).then(function (proc) {
-            return ext_ws_get(seipp_api.processo.consultar_dados, proc).then(function (dados) {
-              return ext_ws_get(seipp_api.processo.marcador, proc).then(function (mardador) {
-                return ext_ws_get(seipp_api.processo.acompanhamento, proc).then(function (acompanhamento) {
-                  return ws_get(wsapi.processo.listar_ciencia, null, processo.atributos.idProcedimento).then(function (ciencias) {
-                    return Promise.resolve({ processo: proc, dados: dados, marcador: mardador, acompanhamento: acompanhamento, ciencias: ciencias });
+      return Promise.all([
+        /** Pega a lista de marcadores */
+        ext_ws_get(seipp_api.marcador.listar).then(function (marc) {
+          Marcadores = marc;
+          console.log("marcadores: ", marc);
+        }),
+        /** Pega a lista de acompanhamento especial */
+        ws_get(wsapi.grupoacompanhamento.listar, null, Login.loginData.IdUnidadeAtual).then(function (grupoacomp) {
+          GrupoAcompanhamentos = grupoacomp;
+          console.log("GrupoAcompanhamentos: ", GrupoAcompanhamentos);
+        }),
+        /** Pega a lista de processos da unidade e os dados dos processos */
+        Promise.all([ws_get(wsapi.processo.listar, "tipo=R"), ws_get(wsapi.processo.listar, "tipo=G")]).then(jsons => {
+          jsons.forEach((json) => dataprocessos = dataprocessos.concat(json));
+          console.log(dataprocessos);
+          if (dataprocessos.length == 0) {
+            $progressbar.progressbar("value", 100);
+          } else {
+            progressbar_val = 100.0 / dataprocessos.length;
+            console.log(progressbar_val);
+          }
+          return dataprocessos.reduce(function (sequence, processo) {
+            return sequence.then(function () {
+              /** Pega informações extras */
+              return ext_ws_get(seipp_api.processo.consultar, null, processo.atributos.idProcedimento).then(function (proc) {
+                return ext_ws_get(seipp_api.processo.consultar_dados, proc).then(function (dados) {
+                  return ext_ws_get(seipp_api.processo.marcador, proc).then(function (mardador) {
+                    return ext_ws_get(seipp_api.processo.acompanhamento, proc).then(function (acompanhamento) {
+                      return ws_get(wsapi.processo.listar_ciencia, null, processo.atributos.idProcedimento).then(function (ciencias) {
+                        return Promise.resolve({ processo: proc, dados: dados, marcador: mardador, acompanhamento: acompanhamento, ciencias: ciencias });
+                      });
+                    });
                   });
                 });
               });
+            }).then(function (DadosExtras) {
+              $progressbar.progressbar("value", $progressbar.progressbar("value") + progressbar_val);
+              console.log($progressbar.progressbar("value"));
+              TabelaAdicinarProcesso(processo, DadosExtras);
             });
-          });
-        }).then(function (DadosExtras) {
-          $progressbar.progressbar("value", $progressbar.progressbar("value") + progressbar_val);
-          console.log($progressbar.progressbar("value"));
-          TabelaAdicinarProcesso(processo, DadosExtras);
-        });
-      }, Promise.resolve());
-    }).then(function () {
+          }, Promise.resolve());
+        })
+      ]);
+    }).then(() => {
       /** Adicioan a tabela na tela do sei */
+      console.log("************ DADOS FINALIZADOS ***************");
       $tabela.appendTo("#divInfraAreaDados");
       $progressbar.progressbar("destroy");
 
@@ -125,11 +128,8 @@ function ControleGerencial() {
       //https://mottie.github.io/tablesorter/docs/example-empty-table.html
       $tabela.trigger("update");
 
-      ws_get(wsapi.documento.listar, "", 3).then(function (json) {
-        console.log(json)
-      }).catch(console.error);
     }).catch(erro => {
-      console.log(erro);
+      console.error(erro);
       $progressbar.progressbar("destroy");
       $("#progressbar div.progress-label").text("");
       if (erro.message.indexOf("Módulo inativo") != -1) {
