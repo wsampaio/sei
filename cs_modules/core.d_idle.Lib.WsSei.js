@@ -166,26 +166,19 @@ function ws_loginGui() {
 
     $(id_dialog).remove();
     $('body').append('<div id="dialog-form" title="SEI++ - Autenticação WsSei"/>');
-    $('#dialog-form').append('<label">Usuário: </label>');
-    $('#dialog-form').append('<input type="text" id="txtUsuario" name="txtUsuario" class="infraText" value="' + usuario + '" style="border: none;" disabled>');
-    $('#dialog-form').append('<label">Senha: </label>');
-    $('#dialog-form').append('<input type="password" name="pwdSenha" id="pwdSenha" value="" class="text ui-widget-content ui-corner-all">');
+    $(id_dialog).append("<form/>");
+    var $dialog_form = $(id_dialog + " form");
+
+    $dialog_form.append('<label for="txtUsuario"">Usuário: </label>');
+    $dialog_form.append('<input type="text" id="txtUsuario" name="txtUsuario" class="infraText" value="' + usuario + '" style="border: none;" disabled>');
+    $dialog_form.append('<label for="pwdSenha">Senha: </label>');
+    $dialog_form.append('<input type="password" name="pwdSenha" id="pwdSenha" value="" class="text ui-widget-content ui-corner-all">');
+    $dialog_form.append('<input type="submit" tabindex="-1" style="display: none;">')
 
     $(id_dialog).dialog({
       autoOpen: false, height: 200, width: 200, modal: true, resizable: false, draggable: false,
       buttons: {
-        Acessar: function () {
-          console.log("wsapi: login");
-          cancelado = false;
-          resolve({
-            usuario: usuario,
-            senha: $("#dialog-form #pwdSenha").val(),
-            contexto: "",
-            orgao: 0,
-            siglaorgao: siglaorgao,
-          });
-          $(this).dialog("close");
-        },
+        Acessar: Acessar,
         Cancelar: function () {
           $(this).dialog("close");
         }
@@ -196,8 +189,25 @@ function ws_loginGui() {
         $(id_dialog).remove();
       }
     });
+    $(id_dialog).find('form').on( "submit", function( event ) {
+      event.preventDefault();
+      Acessar();
+    });
 
     $(id_dialog).dialog("open");
+
+    function Acessar() {
+      console.log("wsapi: login");
+      cancelado = false;
+      resolve({
+        usuario: usuario,
+        senha: $("#dialog-form #pwdSenha").val(),
+        contexto: "",
+        orgao: 0,
+        siglaorgao: siglaorgao,
+      });
+      $(id_dialog).dialog("close");
+    }
   });
 }
 
