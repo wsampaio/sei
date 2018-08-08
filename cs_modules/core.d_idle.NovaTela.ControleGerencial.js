@@ -59,7 +59,7 @@ function ControleGerencial() {
       var unidade_atual = $("#selInfraUnidades > option[selected]").val();
       if (unidade_atual != Login.loginData.IdUnidadeAtual) {
         console.log("unidade_atual: " + unidade_atual, "wssei: " + Login.loginData.IdUnidadeAtual);
-        return ws_post(wsapi.usuario.alterar_unidade, {unidade: unidade_atual}).then( LoginNovo => {
+        return ws_post(wsapi.usuario.alterar_unidade, { unidade: unidade_atual }).then(LoginNovo => {
           console.log("Troca de unidade:", LoginNovo);
           return LoginNovo;
         });
@@ -115,6 +115,24 @@ function ControleGerencial() {
     }).then(() => {
       /** Adicioan a tabela na tela do sei */
       console.log("************ DADOS FINALIZADOS ***************");
+
+      var $dialog = $("<div/>")
+        .attr("id", "cg_configuracao")
+        .attr("title", "Configurações")
+        .append($('<div id="columnSelector" class="columnSelector"/>'))
+        .appendTo("body")
+        .dialog({
+          autoOpen: false, modal: true, //height: 270, width: 275, resizable: false,
+          buttons: {
+            Fechar: function () {
+              $dialog.dialog("close");
+            }
+          },
+        });
+      $("<button>").appendTo('#divInfraAreaDados').button({
+        icon: "ui-icon-gear"
+      }).on("click", () => $dialog.dialog("open"));
+
       $tabela.appendTo("#divInfraAreaDados");
       $progressbar.progressbar("destroy");
 
@@ -124,21 +142,28 @@ function ControleGerencial() {
         headers: {
           5: { sorter: false, filter: false }
         },
-        widgets: ["zebra"],
+        widgets: ["zebra", "columnSelector", "stickyHeaders"],
+        widgetOptions: {
+          // target the column selector markup
+          columnSelector_container: $('#columnSelector'),
+          columnSelector_name: 'data-selector-name',
+          columnSelector_mediaquery: false
+        },
         textExtraction: {
           0: function (node, table, cellIndex) {
             return $("div[title]:first", node).text();
           },
           3: function (node, table, cellIndex) {
-            var texto = $(node).text();
-            return texto.indexOf("vermelho") != -1 ? 0 : texto.indexOf("amarelo") != -1 ? 2 : texto.indexOf("verde") != -1 ? 3 : texto.indexOf("roxo") != -1 ? 4 : 99;
+            var texto = $(node).find("img").attr('src');
+            console.log(texto);
+            return texto;
           }
         }
       });
 
       /** Atualiza a tabela */
       //https://mottie.github.io/tablesorter/docs/example-empty-table.html
-      $tabela.trigger("update");
+      //$tabela.trigger("update");
 
     }).catch(erro => {
       console.error(erro);
@@ -158,12 +183,12 @@ function ControleGerencial() {
       var $thead = $("thead", $tabela);
       /** Cabeçalho da tabela */
       var $throw = $("<tr/>");
-      $throw.append($("<th/>").text("Processo"));
-      $throw.append($("<th/>").text("tipo").addClass("columnHide"));
-      $throw.append($("<th/>").text("Anotação").addClass("columnMax150"));
-      $throw.append($("<th/>").text("Marcador").addClass("columnMax150"));
-      $throw.append($("<th/>").text("Acompanhamento").addClass("columnMax150"));
-      $throw.append($("<th/>").text("Ações").addClass("columnNowrap"));
+      $throw.append($("<th/>").text("Processo").attr("data-priority", "critical"));
+      $throw.append($("<th/>").text("tipo").attr("data-priority", "1").addClass("columnSelector-false"));
+      $throw.append($("<th/>").text("Anotação").attr("data-priority", "2").addClass("columnMax150"));
+      $throw.append($("<th/>").text("Marcador").attr("data-priority", "3").addClass("columnMax150"));
+      $throw.append($("<th/>").text("Acompanhamento").attr("data-priority", "4").addClass("columnSelector-false"));
+      $throw.append($("<th/>").text("Ações").attr("data-priority", "5").addClass("columnNowrap"));
       $thead.append($throw);
     }
 
@@ -229,7 +254,7 @@ function ControleGerencial() {
         $("div[id^='proc']", $trrow).append($ciencia);
       }
       /** (HIDE)Tipo de processo */
-      $trrow.append($("<td/>").text(processo.atributos.tipoProcesso).addClass("columnHide"));
+      $trrow.append($("<td/>").text(processo.atributos.tipoProcesso)); //.addClass("columnHide"));
 
       /** (Anotação) Sugestão de encaminhamento */
       var $anotacao = $("<div/>").addClass("anotacao").attr("idproc", processo.atributos.idProcedimento);
@@ -382,6 +407,7 @@ function ControleGerencial() {
             $anotacao.show();
             $("div.centralizado", $anotacao.parent()).hide();
           }
+          $tabela.trigger("update");
           $dialog.dialog("close");
         }).catch(function (err) {
           alert(err);
@@ -391,7 +417,7 @@ function ControleGerencial() {
 
     function dblclick_marcador() {
       var $select = $("<select/>");
-      var $textarea = $("<textarea/>").css({ width: "250px", height: "150px", resize: "none" });
+      var $textarea = $("<textarea/>").attr("maxlength", 250).css({ width: "250px", height: "150px", resize: "none" });
       var $dialog = $("<div/>")
         .attr("id", "dblclick_marcador")
         .attr("title", "Editar Marcador")
@@ -466,6 +492,7 @@ function ControleGerencial() {
             $marcador.show();
             $("div.centralizado", $marcador.parent()).hide();
           }
+          $tabela.trigger("update");
           $dialog.dialog("close");
         }).catch(function (err) {
           console.log(err);
@@ -476,7 +503,7 @@ function ControleGerencial() {
 
     function dblclick_acompanhamento() {
       var $select = $("<select/>");
-      var $textarea = $("<textarea/>").css({ width: "250px", height: "150px", resize: "none" });
+      var $textarea = $("<textarea/>").attr("maxlength", 250).css({ width: "250px", height: "150px", resize: "none" });
       var $dialog = $("<div/>")
         .attr("id", "dblclick_acompanhamento")
         .attr("title", "Editar Acompanhamento Especial")
@@ -561,6 +588,7 @@ function ControleGerencial() {
             $acompanhamento.show();
             $("div.centralizado", $acompanhamento.parent()).hide();
           }
+          $tabela.trigger("update");
           $dialog.dialog("close");
         }).catch(function (err) {
           console.log(err);
@@ -585,7 +613,7 @@ function ControleGerencial() {
 
           $acompanhamento.hide();
           $("div.centralizado", $acompanhamento.parent()).show();
-
+          $tabela.trigger("update");
           $dialog.dialog("close");
         }).catch(function (err) {
           console.log(err);

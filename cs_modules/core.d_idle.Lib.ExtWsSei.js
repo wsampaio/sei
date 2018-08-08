@@ -378,15 +378,13 @@ function __ProcessoAcompanhamentoConsultar(resp) {
       grupo: null,
       observacao: ""
     }
-    //console.log(resp);
-    if (true/* resp != null */) {
+    var $html = $($.parseHTML(resp));
+    if ($("#frmAcompanhamentoCadastro", $html).attr("action").indexOf("acompanhamento_cadastrar") == -1) {
       /** Se tiver acomapnhamento */
-      var $html = $($.parseHTML(resp));
       acompanhamento.id = $("#hdnIdAcompanhamento", $html).val();
-      acompanhamento.id = acompanhamento.id == "" ? -1 : acompanhamento.id;
       acompanhamento.observacao = $("#txaObservacao", $html).val();
-      var $sel = $("#selGrupoAcompanhamento > option[selected]");
-      if ($sel.val() != undefined) {
+      var $sel = $("#selGrupoAcompanhamento > option[selected]", $html);
+      if ($sel.val() != "null") {
         var grupo = {
           id: $sel.val(),
           nome: $sel.text()
@@ -411,7 +409,7 @@ function __ProcessoAcompanhamentoCadastrarAlterar_Post(resp, json_data) {
     if (isUndefined(json_data.excluir, false)) {
       var x, y;
       x = resp.indexOf("controlador.php?acao=acompanhamento_excluir");
-      y = resp.indexOf("'",x);
+      y = resp.indexOf("'", x);
       post.url = GetBaseUrl() + resp.substring(x, y);
       excludes.push("sbmAlterarAcompanhamento");
     } else {
