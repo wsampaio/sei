@@ -189,7 +189,7 @@ function ws_loginGui() {
         $(id_dialog).remove();
       }
     });
-    $(id_dialog).find('form').on( "submit", function( event ) {
+    $(id_dialog).find('form').on("submit", function (event) {
       event.preventDefault();
       Acessar();
     });
@@ -270,7 +270,17 @@ function ws_post(apirest, json_data, id_url = null) {
   }).then(response => response.json()).then(function (json) {
     console.log(json);
     if (json.sucesso) {
-      if (json.data == undefined) { return []; } else { return json.data; }
+      if (apirest == wsapi.usuario.alterar_unidade) {
+        /** Atualiza storage de informações da unidade */
+        return ws_token().then(Login => {
+          Login.loginData.IdUnidadeAtual = json_data.unidade;
+          return browser.storage.local.set(JSON.parse('{"' + __storageName + '": ' + JSON.stringify(Login) + "}")).then(() => Login);
+        });
+      } else if (json.data == undefined) {
+        return [];
+      } else {
+        return json.data;
+      }
     } else {
       console.log(json);
       return Promise.reject(Error(json.mensagem));
@@ -289,9 +299,9 @@ function ws_get(apirest, params = null, id_url = null) {
       return Promise.reject(wsapiname + "Necessário informar o id: " + urlapi.match(/\{\w+\}/g) + " > apirest");
     }
   }
-  return Promise.resolve().then( function (){
+  return Promise.resolve().then(function () {
     if (apirest == wsapi.orgao.listar) {
-      return Promise.resolve( {Login: {token: ""}});
+      return Promise.resolve({ Login: { token: "" } });
     } else {
       return ws_token();
     }

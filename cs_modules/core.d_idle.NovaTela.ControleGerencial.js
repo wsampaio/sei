@@ -55,6 +55,18 @@ function ControleGerencial() {
         return ws_autenticar();
       }
     }).then(Login => {
+      /** Verifica a unidade atual do sei com o wssei e atualiza se necessário */
+      var unidade_atual = $("#selInfraUnidades > option[selected]").val();
+      if (unidade_atual != Login.loginData.IdUnidadeAtual) {
+        console.log("unidade_atual: " + unidade_atual, "wssei: " + Login.loginData.IdUnidadeAtual);
+        return ws_post(wsapi.usuario.alterar_unidade, {unidade: unidade_atual}).then( LoginNovo => {
+          console.log("Troca de unidade:", LoginNovo);
+          return LoginNovo;
+        });
+      } else {
+        return Login;
+      }
+    }).then(Login => {
       TabelaCriar();
 
       return Promise.all([
