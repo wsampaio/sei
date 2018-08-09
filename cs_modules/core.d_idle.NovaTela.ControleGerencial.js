@@ -23,11 +23,11 @@ function ControleGerencial() {
     $progressbar.progressbar({
       value: false,
       change: function () {
-        console.log("change");
-        $("#progressbar div.progress-label").text($progressbar.progressbar("value") + "%");
+        $("#progressbar div.progress-label").text($progressbar.progressbar("value").toFixed(1) + "%");
       },
       complete: function () {
         $("#progressbar div.progress-label").text("");
+        $progressbar.progressbar("destroy");
       },
       create: function () {
         $("#progressbar div.progress-label").text("Aguarde...");
@@ -81,7 +81,7 @@ function ControleGerencial() {
           console.log("GrupoAcompanhamentos: ", GrupoAcompanhamentos);
         }),
         /** Pega a lista de processos da unidade e os dados dos processos */
-        Promise.all([ws_get(wsapi.processo.listar, "tipo=R"), ws_get(wsapi.processo.listar, "tipo=G")]).then(jsons => {
+        Promise.all([ws_get(wsapi.processo.listar, "tipo=R&limit=100000"), ws_get(wsapi.processo.listar, "tipo=G&limit=100000")]).then(jsons => {
           jsons.forEach((json) => dataprocessos = dataprocessos.concat(json));
           console.log(dataprocessos);
           if (dataprocessos.length == 0) {
@@ -106,7 +106,6 @@ function ControleGerencial() {
               });
             }).then(function (DadosExtras) {
               $progressbar.progressbar("value", $progressbar.progressbar("value") + progressbar_val);
-              console.log($progressbar.progressbar("value"));
               TabelaAdicinarProcesso(processo, DadosExtras);
             });
           }, Promise.resolve());
@@ -115,14 +114,14 @@ function ControleGerencial() {
     }).then(() => {
       /** Adicioan a tabela na tela do sei */
       console.log("************ DADOS FINALIZADOS ***************");
-
+      $progressbar.progressbar("value", 100);
       var $dialog = $("<div/>")
         .attr("id", "cg_configuracao")
         .attr("title", "Configurações")
         .append($('<div id="columnSelector" class="columnSelector"/>'))
         .appendTo("body")
         .dialog({
-          autoOpen: false, modal: true, //height: 270, width: 275, resizable: false,
+          autoOpen: false, modal: true,
           buttons: {
             Fechar: function () {
               $dialog.dialog("close");
@@ -134,7 +133,6 @@ function ControleGerencial() {
       }).on("click", () => $dialog.dialog("open"));
 
       $tabela.appendTo("#divInfraAreaDados");
-      $progressbar.progressbar("destroy");
 
       /** Aplica o tablesorter */
       $tabela.tablesorter({
