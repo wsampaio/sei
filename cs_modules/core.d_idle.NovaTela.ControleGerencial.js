@@ -27,7 +27,6 @@ function ControleGerencial() {
       },
       complete: function () {
         $("#progressbar div.progress-label").text("");
-        $progressbar.progressbar("destroy");
       },
       create: function () {
         $("#progressbar div.progress-label").text("Aguarde...");
@@ -114,7 +113,7 @@ function ControleGerencial() {
     }).then(() => {
       /** Adicioan a tabela na tela do sei */
       console.log("************ DADOS FINALIZADOS ***************");
-      $progressbar.progressbar("value", 100);
+      $progressbar.hide();
       var $dialog = $("<div/>")
         .attr("id", "cg_configuracao")
         .attr("title", "Configurações")
@@ -628,15 +627,16 @@ function ControleGerencial() {
     function click_acao_concluir() {
       var $acao_concluir = $(this);
       var nprocesso = $acao_concluir.attr("idproc");
-      ws_post(wsapi.processo.concluir, { numeroProcesso: nprocesso }).then(resp => {
-        /** Remove o processo da tabela */
-        $acao_concluir.parent().parent().remove();
-        $tabela.trigger("update");
-
-        alert("Processo concluído");
-      }).catch(err => {
-        alert(err);
-      });
+      if (confirm("Deseja concluir o processo " + $acao_concluir.parent().parent().find("div > a").text() + "?")) {
+        ws_post(wsapi.processo.concluir, { numeroProcesso: nprocesso }).then(resp => {
+          /** Remove o processo da tabela */
+          $acao_concluir.parent().parent().remove();
+          $tabela.trigger("update");
+          alert("Processo concluído");
+        }).catch(err => {
+          alert(err);
+        });
+      }
     }
   };
 
