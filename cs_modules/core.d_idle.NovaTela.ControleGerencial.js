@@ -185,8 +185,8 @@ function ControleGerencial() {
       var $throw = $("<tr/>");
       $throw.append($("<th/>").text("Processo").attr("data-priority", "critical"));
       $throw.append($("<th/>").text("tipo").attr("data-priority", "1").addClass("columnSelector-false"));
-      $throw.append($("<th/>").text("Anotação").attr("data-priority", "2").addClass("columnMax150"));
-      $throw.append($("<th/>").text("Marcador").attr("data-priority", "3").addClass("columnMax150"));
+      $throw.append($("<th/>").text("Anotação").attr("data-priority", "2"));
+      $throw.append($("<th/>").text("Marcador").attr("data-priority", "3"));
       $throw.append($("<th/>").text("Acompanhamento").attr("data-priority", "4").addClass("columnSelector-false"));
       $throw.append($("<th/>").text("Ações").attr("data-priority", "5").addClass("columnNowrap"));
       $thead.append($throw);
@@ -254,7 +254,7 @@ function ControleGerencial() {
         $("div[id^='proc']", $trrow).append($ciencia);
       }
       /** (HIDE)Tipo de processo */
-      $trrow.append($("<td/>").text(processo.atributos.tipoProcesso)); //.addClass("columnHide"));
+      $trrow.append($("<td/>").text(processo.atributos.tipoProcesso));
 
       /** (Anotação) Sugestão de encaminhamento */
       var $anotacao = $("<div/>").addClass("anotacao").attr("idproc", processo.atributos.idProcedimento);

@@ -24,19 +24,14 @@
 #TabelaGR {
   width: 100%;
 }
-
-/** Colunas **/
-.columnHide{
-  display: none;
+#TabelaGR tbody tr, #TabelaGR tbody td {
+  height: 100%;
 }
 
+/** Colunas **/
 .columnNowrap {
   width: 10px;
   white-space: nowrap;
-}
-
-.columnMax150 {
-  max-width: 150px;
 }
 
 .tablesorter-header-inner {
@@ -68,14 +63,12 @@
 
 /** Anotação **/
 #tdanotacao {
-  position: relative;
-  padding: 0px;
-  height: 100%;
+  padding: 1px;
 }
 .anotacao {
-  display: table;
+  box-sizing: border-box;
+  padding: 5px;
   height: 100%;
-  width: 100%;
 }
 .anotacao[prioridade='true'] {
   background-color: rgb(252, 70, 70);
@@ -85,8 +78,14 @@
 }
 
 /** Marcador **/
-.tdmarcador { padding: 0px; }
-.marcador { padding: 3px; }
+#tdmarcador { padding: 1px; }
+#tdanotacao div.centralizado {
+  padding: 4px;
+}
+.marcador {
+  height: 100%;
+  padding: 3px;
+}
 .marcador > div#img {
   display: flex;
   border: 1px lightgray solid;
@@ -103,6 +102,9 @@
 }
 
 /** Acompanhamento **/
+.acompanhamento {
+  height: 100%;
+}
 .acompanhamento div#img {
   display: flex;
   border: 1px lightgray solid;
