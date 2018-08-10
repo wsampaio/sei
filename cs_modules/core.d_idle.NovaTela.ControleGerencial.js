@@ -93,14 +93,13 @@ function ControleGerencial() {
             return sequence.then(function () {
               /** Pega informações extras */
               return ext_ws_get(seipp_api.processo.consultar, null, processo.atributos.idProcedimento).then(function (proc) {
-                return ext_ws_get(seipp_api.processo.consultar_dados, proc).then(function (dados) {
-                  return ext_ws_get(seipp_api.processo.marcador, proc).then(function (mardador) {
-                    return ext_ws_get(seipp_api.processo.acompanhamento, proc).then(function (acompanhamento) {
-                      return ws_get(wsapi.processo.listar_ciencia, null, processo.atributos.idProcedimento).then(function (ciencias) {
-                        return Promise.resolve({ processo: proc, dados: dados, marcador: mardador, acompanhamento: acompanhamento, ciencias: ciencias });
-                      });
-                    });
-                  });
+                return Promise.all([
+                  ext_ws_get(seipp_api.processo.consultar_dados, proc),
+                  ext_ws_get(seipp_api.processo.marcador, proc),
+                  ext_ws_get(seipp_api.processo.acompanhamento, proc),
+                  ws_get(wsapi.processo.listar_ciencia, null, processo.atributos.idProcedimento)
+                ]).then(dados => {
+                  return Promise.resolve({ processo: proc, dados: dados[0], marcador: dados[1], acompanhamento: dados[2], ciencias: dados[3] })
                 });
               });
             }).then(function (DadosExtras) {
