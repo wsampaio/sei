@@ -417,13 +417,14 @@ function ControleGerencial() {
       var $dialog = $("<div/>")
         .attr("id", "dblclick_marcador")
         .attr("title", "Editar Marcador")
-        .append($("<label/>").text("Marcador"))
+        .append($("<label/>").text("Marcador:"))
         .append($select)
         .append($textarea);
       var $marcador = $(this);
       $select.append($("<option/>").text("").val(null));
       Marcadores.forEach(function (Marcador) {
-        $select.append($("<option/>").text(Marcador.nome).val(Marcador.id));
+        $select.append($("<option/>").text(Marcador.nome).val(Marcador.id)
+          .attr("data-url", "imagens/marcador_" + Marcador.cor + ".png"));
       });
       $select.find("option").each(function () {
         if ($marcador.find("#img > label").text() == $(this).text()) {
@@ -443,6 +444,10 @@ function ControleGerencial() {
         close: function () {
           $dialog.dialog("destroy");
           $("#dblclick_marcador").remove();
+        },
+        open: function (event, ui) {
+          $(this).find("select").iconselectmenu()
+            .addClass("ui-menu-icons");
         }
       });
       $dialog.dialog("open");
