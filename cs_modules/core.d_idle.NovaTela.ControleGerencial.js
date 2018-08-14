@@ -9,29 +9,13 @@ function ControleGerencial() {
     mconsole.log("Criando nova tela de controle gerencial...");
     var IdTabela = "TabelaGR";
     var $tabela = null;
+    var $progressbar = null;
     var Marcadores = [];
     var GrupoAcompanhamentos = [];
 
     /** Recuperar os dados dos processos pelo wssei */
     var dataprocessos = [];
     var progressbar_val = 0;
-
-    /** Título da nova tela */
-    $("#divInfraBarraLocalizacao").text("Controle Gerencial de Processos");
-    $("#divInfraAreaDados").removeAttr("style").append('<div id="progressbar"><div class="progress-label">0%</div></div>');
-    var $progressbar = $("#progressbar");
-    $progressbar.progressbar({
-      value: false,
-      change: function () {
-        $("#progressbar div.progress-label").text($progressbar.progressbar("value").toFixed(1) + "%");
-      },
-      complete: function () {
-        $("#progressbar div.progress-label").text("");
-      },
-      create: function () {
-        $("#progressbar div.progress-label").text("Aguarde...");
-      }
-    });
 
     /** Verifica a versão mínima do navegador */
     if (!isChrome) {
@@ -42,6 +26,9 @@ function ControleGerencial() {
         }
       }, null);
     }
+
+    /** Cria a tabela gerencial */
+    TabelaCriar();
 
     /** Verifica se o WebService do SEI está ativo */
     ws_get(wsapi.orgao.listar).then(() => ws_token(true)).catch(err => {
@@ -66,8 +53,6 @@ function ControleGerencial() {
         return Login;
       }
     }).then(Login => {
-      TabelaCriar();
-
       return Promise.all([
         /** Pega a lista de marcadores */
         ext_ws_get(seipp_api.marcador.listar).then(function (marc) {
@@ -113,6 +98,45 @@ function ControleGerencial() {
       /** Adicioan a tabela na tela do sei */
       console.log("************ DADOS FINALIZADOS ***************");
       $progressbar.hide();
+
+      /** Atualiza a tabela */
+      //https://mottie.github.io/tablesorter/docs/example-empty-table.html
+      $tabela.find("thead > tr > th").removeClass("sorter-false");
+      $tabela.trigger("update");
+
+    }).catch(erro => {
+      console.error(erro);
+      $progressbar.progressbar("destroy");
+      $("#progressbar div.progress-label").text("");
+      if (erro.message.indexOf("Módulo inativo") != -1) {
+        $("#divInfraAreaDados").append(erro.toString() + " Esta funcionalidade necessita que o módulo WebService esteja ativo.");
+      } else {
+        $("#divInfraAreaDados").append(erro);
+      }
+    });
+
+    /**  */
+    function TabelaCriar() {
+      /** Título da nova tela */
+      $("#divInfraBarraLocalizacao").text("Controle Gerencial de Processos");
+      $("#divInfraAreaDados").removeAttr("style");
+      var $comandos = $('<div id="cg_comandos"/>');
+
+      $progressbar = $('<div id="progressbar"><div class="progress-label">0%</div></div>');
+      $progressbar.progressbar({
+        value: false,
+        change: function () {
+          $("#progressbar div.progress-label").text($progressbar.progressbar("value").toFixed(1) + "%");
+        },
+        complete: function () {
+          $("#progressbar div.progress-label").text("");
+        },
+        create: function () {
+          $("#progressbar div.progress-label").text("Aguarde...");
+        }
+      });
+
+      /* Botão e tela de configuração */
       var $dialog = $("<div/>")
         .attr("id", "cg_configuracao")
         .attr("title", "Configurações")
@@ -126,13 +150,26 @@ function ControleGerencial() {
             }
           },
         });
-      $("<button>").appendTo('#divInfraAreaDados').button({
+      var $bt_configuracao = $("<button>").button({
         icon: "ui-icon-gear"
       }).on("click", () => $dialog.dialog("open"));
+      $comandos.append($bt_configuracao, $progressbar);
 
-      $tabela.appendTo("#divInfraAreaDados");
+      /** Criar o html da tabela de processos */
+      $tabela = $("<table/>").attr("id", IdTabela).addClass("tablesorter").append("<thead/>").append("<tbody/>");
+      var $thead = $("thead", $tabela);
+      /** Cabeçalho da tabela */
+      var $throw = $("<tr/>");
+      $throw.append($("<th/>").text("Processo").attr("data-priority", "critical").addClass("sorter-false"));
+      $throw.append($("<th/>").text("tipo").attr("data-priority", "1").addClass("sorter-false columnSelector-false"));
+      $throw.append($("<th/>").text("Anotação").attr("data-priority", "2").addClass("sorter-false"));
+      $throw.append($("<th/>").text("Marcador").attr("data-priority", "3").addClass("sorter-false"));
+      $throw.append($("<th/>").text("Acompanhamento").attr("data-priority", "4").addClass("sorter-false columnSelector-false"));
+      $throw.append($("<th/>").text("Ações").attr("data-priority", "5").addClass("columnNowrap"));
+      $thead.append($throw);
 
       /** Aplica o tablesorter */
+      $("#divInfraAreaDados").append($comandos, $tabela);
       $tabela.tablesorter({
         theme: 'blue',
         headers: {
@@ -156,36 +193,6 @@ function ControleGerencial() {
           }
         }
       });
-
-      /** Atualiza a tabela */
-      //https://mottie.github.io/tablesorter/docs/example-empty-table.html
-      //$tabela.trigger("update");
-
-    }).catch(erro => {
-      console.error(erro);
-      $progressbar.progressbar("destroy");
-      $("#progressbar div.progress-label").text("");
-      if (erro.message.indexOf("Módulo inativo") != -1) {
-        $("#divInfraAreaDados").append(erro.toString() + " Esta funcionalidade necessita que o módulo WebService esteja ativo.");
-      } else {
-        $("#divInfraAreaDados").append(erro);
-      }
-    });
-
-    /**  */
-    function TabelaCriar() {
-      /** Criar o html da tabela de processos */
-      $tabela = $("<table/>").attr("id", IdTabela).addClass("tablesorter").append("<thead/>").append("<tbody/>");
-      var $thead = $("thead", $tabela);
-      /** Cabeçalho da tabela */
-      var $throw = $("<tr/>");
-      $throw.append($("<th/>").text("Processo").attr("data-priority", "critical"));
-      $throw.append($("<th/>").text("tipo").attr("data-priority", "1").addClass("columnSelector-false"));
-      $throw.append($("<th/>").text("Anotação").attr("data-priority", "2"));
-      $throw.append($("<th/>").text("Marcador").attr("data-priority", "3"));
-      $throw.append($("<th/>").text("Acompanhamento").attr("data-priority", "4").addClass("columnSelector-false"));
-      $throw.append($("<th/>").text("Ações").attr("data-priority", "5").addClass("columnNowrap"));
-      $thead.append($throw);
     }
 
     /**
@@ -249,8 +256,8 @@ function ControleGerencial() {
         $ciencia.attr("title", list_ciencia);
         $("div[id^='proc']", $trrow).append($ciencia);
       }
-      /** (HIDE)Tipo de processo */
-      $trrow.append($("<td/>").text(processo.atributos.tipoProcesso));
+      /** (HIDE) Tipo de processo */
+      $trrow.append($("<td/>").append($("<div/>").text(processo.atributos.tipoProcesso)));
 
       /** (Anotação) Sugestão de encaminhamento */
       var $anotacao = $("<div/>").addClass("anotacao").attr("idproc", processo.atributos.idProcedimento);
@@ -349,6 +356,8 @@ function ControleGerencial() {
 
       /** FIM */
       $tbody.append($trrow);
+      /* Atualiza a tabela */
+      $tabela.trigger("update");
     }
 
     function dblclick_anotacao() {
