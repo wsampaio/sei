@@ -264,7 +264,7 @@ function ws_post(apirest, json_data, id_url = null) {
     console.log(wsapiname + "POST " + GetBaseUrl() + modwsapi + apirest, json_data);
     return fetch(GetBaseUrl() + modwsapi + apirest, {
       body: JSON.stringify(json_data),
-      headers: { 'content-type': 'application/json', 'token': Login.token },
+      headers: { 'content-type': 'application/json', 'token': Login.token, 'unidade': Login.loginData.IdUnidadeAtual },
       method: 'POST'
     });
   }).then(response => response.json()).then(function (json) {
@@ -301,18 +301,17 @@ function ws_get(apirest, params = null, id_url = null) {
   }
   return Promise.resolve().then(function () {
     if (apirest == wsapi.orgao.listar) {
-      return Promise.resolve({ Login: { token: "" } });
+      return Promise.resolve({ token: "", loginData: { IdUnidadeAtual: "" }  });
     } else {
       return ws_token();
     }
   }).then(function (Login) {
     console.log(wsapiname + "GET " + urlapi);
     return fetch(urlapi, {
-      headers: { 'content-type': 'application/json', 'token': Login.token },
+      headers: { 'content-type': 'application/json', 'token': Login.token, 'unidade': Login.loginData.IdUnidadeAtual },
       method: 'GET'
     });
   }).then(response => response.json()).then(function (json) {
-    console.log(json);
     if (json.sucesso) {
       if (json.data == undefined) { return []; } else { return json.data; }
     } else {

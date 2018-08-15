@@ -5,8 +5,9 @@ function ControleGerencial() {
     MenuAcao: null
   };
 
-  data.MenuAcao = function (mconsole) {
-    mconsole.log("Criando nova tela de controle gerencial...");
+  data.MenuAcao = function (BaseName) {
+    var ModName = BaseName + ".NovaTela";
+    var mconsole = new __mconsole(ModName);
     var IdTabela = "TabelaGR";
     var $tabela = null;
     var $progressbar = null;
@@ -16,6 +17,8 @@ function ControleGerencial() {
     /** Recuperar os dados dos processos pelo wssei */
     var dataprocessos = [];
     var progressbar_val = 0;
+
+    mconsole.log("Criando nova tela de controle gerencial...");
 
     /** Verifica a versão mínima do navegador */
     if (!isChrome) {
@@ -67,12 +70,11 @@ function ControleGerencial() {
         /** Pega a lista de processos da unidade e os dados dos processos */
         Promise.all([ws_get(wsapi.processo.listar, "tipo=R&limit=100000"), ws_get(wsapi.processo.listar, "tipo=G&limit=100000")]).then(jsons => {
           jsons.forEach((json) => dataprocessos = dataprocessos.concat(json));
-          console.log(dataprocessos);
+          console.log("Lista de processos:", dataprocessos);
           if (dataprocessos.length == 0) {
             $progressbar.progressbar("value", 100);
           } else {
             progressbar_val = 100.0 / dataprocessos.length;
-            console.log(progressbar_val);
           }
           return dataprocessos.reduce(function (sequence, processo) {
             return sequence.then(function () {
@@ -186,9 +188,14 @@ function ControleGerencial() {
           0: function (node, table, cellIndex) {
             return $("div[title]:first", node).text();
           },
+          2: function (node, table, cellIndex) {
+            var texto = $(node).find("div[class='anotacao']").text();
+            texto = texto == "" ? -99999 : texto;
+            return texto;
+          },
           3: function (node, table, cellIndex) {
             var texto = $(node).find("img").attr('src');
-            console.log(texto);
+            texto = texto == undefined ? 0 : texto;
             return texto;
           }
         }

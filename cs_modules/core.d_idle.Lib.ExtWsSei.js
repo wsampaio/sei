@@ -318,7 +318,6 @@ function __ProcessoConsultarMarcador(resp) {
       });
       var $optsel = $("#selMarcador option[selected]", $html);
       if ($optsel.val() != "null") {
-        console.log($optsel);
         marcador.id = $optsel.val();
         marcador.marcador = $optsel.text();
         marcador.data = marcador.historico[0].data;
@@ -449,7 +448,6 @@ function __MarcadorListar(resp) {
     var marcadores = [];
     var $tabela = $("#divInfraAreaTabela > table > tbody > tr[class]", $html);
     if ($tabela.length) {
-      console.log($tabela.html());
       $tabela.each(function () {
         var marcador = {
           id: $("td:eq(3)", $(this)).text(),

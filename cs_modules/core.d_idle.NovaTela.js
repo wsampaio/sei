@@ -1,5 +1,6 @@
 function NovaTela(BaseName) {
-  var mconsole = new __mconsole(BaseName + ".NovaTela");
+  var ModName = BaseName + ".NovaTela";
+  var mconsole = new __mconsole(ModName);
   var Acoes = [];
 
   function AdicionarNovaTela(func) {
@@ -33,7 +34,7 @@ function NovaTela(BaseName) {
       if (IdTela.NovaTela != null) {
         for (const Acao of Acoes) {
           mconsole.log("Acao > " + Acao);
-          if (Acao.MenuId == IdTela.NovaTela) { Acao.MenuAcao(mconsole); }
+          if (Acao.MenuId == IdTela.NovaTela) { Acao.MenuAcao(ModName); }
         }
       } else {
         var href = $MenuProcControlar.attr("href");
