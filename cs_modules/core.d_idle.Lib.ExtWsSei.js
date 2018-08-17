@@ -10,6 +10,9 @@ var seipp_api = {
     marcador: "andamento_marcador_gerenciar",
     acompanhamento: "acompanhamento_cadastrar"
   },
+  listar: {
+    processos: "procedimento_controlar",
+  },
   marcador: {
     listar: "marcador_listar"
   }
@@ -20,57 +23,78 @@ var seipp_api = {
  * @param {*} apirest
  * @param {*} json_data
  */
-function ext_ws_post(apirest, json_data) {
-  if (__isInGroup(seipp_api, apirest)) {
-    if (__isInGroup(seipp_api.processo, apirest)) {
-      return ext_ws_get(seipp_api.processo.consultar, null, json_data.idProcesso).then(proc => {
-        /** Pega o link para buscar os dados */
-        var link = proc.LinkComandos.reduce((acc, cur, i) => {
-          if (cur.indexOf(apirest) != -1) acc = cur;
-          return acc;
+function ext_ws_post(apirest, json_data, opt_data = null, resp = null) {
+  return new Promise((resolve, reject) => {
+    if (__isInGroup(seipp_api, apirest)) {
+      var ExecPost = null;
+      if (resp != null) {
+        ExecPost = Promise.resolve(resp);
+      } else if (__isInGroup(seipp_api.processo, apirest) && opt_data != null) {
+        ExecPost = Promise.resolve(opt_data).then(proc => {
+          /** Pega o link para buscar os dados */
+          var link = proc.LinkComandos.reduce((acc, cur, i) => {
+            if (cur.indexOf(apirest) != -1) acc = cur;
+            return acc;
+          });
+          console.log(apirest + "GET " + apirest + " > " + link);
+          return fetch(link, { method: 'GET' });
+        }).then(response => {
+          /** Converte a resposta para ISO-8859-1 */
+          var contentType = response.headers.get("content-type");
+          if (response.ok) {
+            if (contentType && contentType.includes("text/html")) {
+              return response.arrayBuffer().then(buf => new TextDecoder('ISO-8859-1').decode(buf));
+            } else { console.log(contentType); throw new Error("Erro no Content Type esperado!"); }
+          } else {
+            throw new Error(response.statusText + ": " + response.status);
+          }
         });
-        console.log(apirest + "GET " + apirest + " > " + link);
-        return fetch(link, { method: 'GET' });
-      }).then(response => {
-        /** Converte a resposta para ISO-8859-1 */
-        var contentType = response.headers.get("content-type");
-        if (response.ok) {
-          if (contentType && contentType.includes("text/html")) {
-            return response.arrayBuffer().then(buf => new TextDecoder('ISO-8859-1').decode(buf));
-          } else { console.log(contentType); throw new Error("Erro no Content Type esperado!"); }
-        } else {
-          throw new Error(response.statusText + ": " + response.status);
-        }
-      }).then(resp => {
-        /** Trata a resposta de acordo com a api */
-        switch (apirest) {
-          case seipp_api.processo.marcador:
-            return __ProcessoCadastrarMarcador_Post(resp, json_data);
-          case seipp_api.processo.acompanhamento:
-            return __ProcessoAcompanhamentoCadastrarAlterar_Post(resp, json_data);
-          default:
-            return Promise.reject(seipp_api_name + ": Api não implementada");
-        }
-      }).then(post => {
-        /** Envia o post da requisição */
-        console.log(seipp_api_name + "POST " + apirest + " > " + post.url, post.data);
-        post.data = postEncodeURI(post.data);
-        return fetch(post.url, {
-          body: JSON.stringify(post.data),
-          headers: { 'content-type': 'application/x-www-form-urlencoded' },
-          method: 'POST'
+      } else if (__isInGroup(seipp_api.listar, apirest) && resp != null) {
+        ExecPost = Promise.resolve(resp);
+      }
+
+      if (ExecPost != null) {
+        ExecPost.then(resp => {
+          /** Trata a resposta de acordo com a api */
+          switch (apirest) {
+            case seipp_api.processo.marcador:
+              return __ProcessoCadastrarMarcador_Post(resp, json_data);
+            case seipp_api.processo.acompanhamento:
+              return __ProcessoAcompanhamentoCadastrarAlterar_Post(resp, json_data);
+            case seipp_api.listar.processos:
+              return __Post_ProcessoListar(resp, json_data);
+            default:
+              return new Error(seipp_api_name + ": Api não implementada");
+          }
+        }).then(post => {
+          /** Envia o post da requisição */
+          console.log(seipp_api_name + "POST " + apirest + " > " + post.url, post.data);
+          post.data = postEncodeURI(post.data);
+          return fetch(post.url, {
+            body: post.data,
+            headers: { 'content-type': 'application/x-www-form-urlencoded' },
+            method: 'POST'
+          });
+        }).then(function (response) {
+          var contentType = response.headers.get("content-type");
+          console.log("ext_ws_post", contentType);
+          if (response.ok) {
+            if (contentType && contentType.includes("text/html")) {
+              return response.arrayBuffer().then(buf => new TextDecoder('ISO-8859-1').decode(buf));
+            } else if (contentType && contentType.includes("wsapi")) {
+              return response.msg;
+            } else { console.log(contentType); throw new Error("Erro no Content Type esperado!"); }
+          } else {
+            throw new Error(response.statusText + ": " + response.status);
+          }
+        }).then(function (resp) {
+          resolve(resp);
         });
-      }).then(resp => {
-        if (resp.redirected && resp.ok) {
-          return json_data;
-        } else {
-          return Promise.reject(resp);
-        }
-      });
+      } else { reject(seipp_api_name + "ERRO: Post") }
+    } else {
+      reject(Error("Api não implementada: " + apirest));
     }
-  } else {
-    reject(Error("Api não implementada: " + apirest));
-  }
+  });
 }
 
 /**
@@ -147,6 +171,8 @@ function ext_ws_get(apirest, params = null, id_url = null) {
         return __ProcessoAcompanhamentoConsultar(resp);
       case seipp_api.marcador.listar:
         return __MarcadorListar(resp);
+      case seipp_api.listar.processos:
+        return __Get_ProcessoListar(resp);
       default:
         throw new Error("Api não implementada");
     }
@@ -159,6 +185,138 @@ function __isInGroup(group, value) {
     if (group[iterator] == value) return true;
   }
   return false;
+}
+
+/****** Métodos que usam post ******/
+
+
+
+/****** Métodos que usam get *******/
+
+/** @type {{id: number, x: string}} */
+var lprocesso = {
+  /** @type {number} Id do processo */
+  idProcedimento: -1,
+  numDoc: "",
+  tipoProcesso: "",
+  especificacao: "",
+  linkHash: "",
+  usuarioAtribuido: "",
+  anotacao: {
+    descricao: "",
+    nomeUsuario: "",
+    prioridade: false,
+  },
+  marcador: {
+    nome: "",
+    cor: "",
+    descricao: ""
+  },
+  pontoControle: "",
+  processoVisualizado: false,
+  processoVisitado: false
+}
+/**
+ * Pega a lista de processos.
+ * @param {string} resp html de retorno do fetch.
+ * @returns {lprocesso}
+ */
+function __Get_ProcessoListar(resp) {
+  return new Promise((resolve, reject) => {
+    var $html = $($.parseHTML(resp));
+    var confOrig = { tipoVisualizacao: "", meusProcessos: "", idMarcador: "" };
+    /** (R = Resumida | D = Detalhada) > mudarVisualizacao() -> hdnTipoVisualizacao = valor*/
+    confOrig.tipoVisualizacao = $html.find("#hdnTipoVisualizacao").val();
+    /** (T = Todos | M = Meus) > verProcessos() -> hdnMeusProcessos = valor */
+    confOrig.meusProcessos = $html.find("#hdnMeusProcessos").val();
+    confOrig.meusProcessos = confOrig.meusProcessos == "" ? 'T' : confOrig.meusProcessos;
+    /** filtrado por Marcador > filtrarMarcador(null) -> hdnIdMarcador110000002 = valor ???? */
+    confOrig.idMarcador = $html.find("input[id^='hdnIdMarcador']").val();
+    console.log(confOrig);
+    /** Se estiver filtrado tem que remover os filtros e buscar a página novamente */
+    if (confOrig.meusProcessos == "M" || confOrig.idMarcador != "") {
+      /** Fazer um post na página */
+      var post_data = { tipoVisualizacao: "D", meusProcessos: "T", idMarcador: "" }
+      ext_ws_post(seipp_api.listar.processos, post_data, null, resp).then(__Get_ProcessoListar).then(ret => {
+        /** Retornar filtros iniciais da tela */
+        ext_ws_post(seipp_api.listar.processos, confOrig, null, resp).then(() => {
+          console.log("reconfigurado");
+        });
+        resolve(ret);
+      });
+    } else {
+      var $trows = $html.find("#tblProcessosDetalhado tr[id]");
+      var processos = [];
+      console.log($trows);
+      $trows.each(function(index) {
+        var $trow = $(this);
+        var p = {};
+        var x, y;
+        console.log($trow);
+        p.idProcedimento = $trow.attr("id").substr(1);
+        p.numDoc = $trow.find("td:nth-child(3) > a").text();
+        p.linkHash = $trow.find("td:nth-child(3) > a").attr("href");
+
+        p.especificacao = $trow.find("td:nth-child(3) > a").attr("onmouseover");
+        x = p.especificacao.indexOf("'") + 1;
+        y = p.especificacao.indexOf("'", x);
+        p.especificacao = p.especificacao.substring(x, y);
+
+        p.tipoProcesso = $trow.find("td:nth-child(5)").text();
+        p.usuarioAtribuido = $trow.find("td:nth-child(4) > a").text();
+
+        var anotacao = $trow.find("td:nth-child(2) > a[href^='controlador.php?acao=anotacao_registrar']").attr("onmouseover");
+        if (anotacao != undefined) {
+          p.anotacao = {};
+          p.anotacao.descricao = $trow.find("td:nth-child(2) > a[href^='controlador.php?acao=anotacao_registrar']").attr("onmouseover");
+          p.anotacao.nomeUsuario = "";
+          p.anotacao.prioridade = "";
+        }
+
+        p.marcador = {};
+        p.marcador.nome = "";
+        p.marcador.cor = "";
+        p.marcador.descricao = "";
+
+        p.pontoControle = "";
+        p.processoVisualizado = "";
+        p.processoVisitado = "";
+        processos.push(p);
+      });
+      resolve(processos);
+    }
+  });
+}
+function __Post_ProcessoListar(resp, json_data) {
+  return new Promise((resolve, reject) => {
+    var excludes = ["ID-9", "chkGeradosItem0"];
+    var $html = $($.parseHTML(resp));
+    var hdnIdMarcador = $html.find("input[id^='hdnIdMarcador']").attr("id");
+    var post = { url: "", data: {} };
+    post.url = GetBaseUrl() + $("#frmProcedimentoControlar", $html).attr("action");
+    console.log(hdnIdMarcador);
+    $("#frmProcedimentoControlar [name]", $html).each(function () {
+      var name = $(this).attr("name");
+      var val = $(this).val();
+      if (excludes.find(n => n == name) == undefined && val != undefined) {
+        switch (name) {
+          case "hdnMeusProcessos":
+            post.data[name] = json_data.meusProcessos;
+            break;
+          case hdnIdMarcador:
+            post.data[name] = json_data.idMarcador;
+            break;
+          case "hdnTipoVisualizacao":
+            post.data[name] = json_data.tipoVisualizacao;
+            break;
+          default:
+            post.data[name] = val;
+            break;
+        }
+      }
+    });
+    resolve(post);
+  });
 }
 
 /**

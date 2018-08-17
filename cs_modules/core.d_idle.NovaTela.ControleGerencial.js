@@ -67,36 +67,40 @@ function ControleGerencial() {
           GrupoAcompanhamentos = grupoacomp;
           console.log("GrupoAcompanhamentos: ", GrupoAcompanhamentos);
         }),
-        /** Pega a lista de processos da unidade e os dados dos processos */
-        Promise.all([ws_get(wsapi.processo.listar, "tipo=R&limit=100000"), ws_get(wsapi.processo.listar, "tipo=G&limit=100000")]).then(jsons => {
-          jsons.forEach((json) => dataprocessos = dataprocessos.concat(json));
-          console.log("Lista de processos:", dataprocessos);
-          if (dataprocessos.length == 0) {
-            $progressbar.progressbar("value", 100);
-          } else {
-            progressbar_val = 100.0 / dataprocessos.length;
-          }
-          return dataprocessos.reduce(function (sequence, processo) {
-            return sequence.then(function () {
-              /** Pega informações extras */
-              return ext_ws_get(seipp_api.processo.consultar, null, processo.atributos.idProcedimento).then(function (proc) {
-                return Promise.all([
-                  ext_ws_get(seipp_api.processo.consultar_dados, proc),
-                  ext_ws_get(seipp_api.processo.marcador, proc),
-                  ext_ws_get(seipp_api.processo.acompanhamento, proc),
-                  ws_get(wsapi.processo.listar_ciencia, null, processo.atributos.idProcedimento)
-                ]).then(dados => {
-                  return Promise.resolve({ processo: proc, dados: dados[0], marcador: dados[1], acompanhamento: dados[2], ciencias: dados[3] })
-                });
-              });
-            }).then(function (DadosExtras) {
-              $progressbar.progressbar("value", $progressbar.progressbar("value") + progressbar_val);
-              TabelaAdicinarProcesso(processo, DadosExtras);
-            });
-          }, Promise.resolve());
-        })
+        // /** Pega a lista de processos da unidade e os dados dos processos */
+        // Promise.all([ws_get(wsapi.processo.listar, "tipo=R&limit=100000"), ws_get(wsapi.processo.listar, "tipo=G&limit=100000")]).then(jsons => {
+        //   jsons.forEach((json) => dataprocessos = dataprocessos.concat(json));
+        //   console.log("Lista de processos:", dataprocessos);
+        //   if (dataprocessos.length == 0) {
+        //     $progressbar.progressbar("value", 100);
+        //   } else {
+        //     progressbar_val = 100.0 / dataprocessos.length;
+        //   }
+        //   return dataprocessos.reduce(function (sequence, processo) {
+        //     return sequence.then(function () {
+        //       console.log(processo.atributos.status, processo);
+        //       return Promise.resolve();
+        //       /** Pega informações extras */
+        //       // return ext_ws_get(seipp_api.processo.consultar, null, processo.atributos.idProcedimento).then(function (proc) {
+        //       //   return Promise.all([
+        //       //     ext_ws_get(seipp_api.processo.consultar_dados, proc),
+        //       //     ext_ws_get(seipp_api.processo.marcador, proc),
+        //       //     ext_ws_get(seipp_api.processo.acompanhamento, proc),
+        //       //     ws_get(wsapi.processo.listar_ciencia, null, processo.atributos.idProcedimento)
+        //       //   ]).then(dados => {
+        //       //     return Promise.resolve({ processo: proc, dados: dados[0], marcador: dados[1], acompanhamento: dados[2], ciencias: dados[3] })
+        //       //   });
+        //       // });
+        //     }).then(function (DadosExtras) {
+        //       $progressbar.progressbar("value", $progressbar.progressbar("value") + progressbar_val);
+        //       //TabelaAdicinarProcesso(processo, DadosExtras);
+        //     });
+        //   }, Promise.resolve());
+        // })
+        ext_ws_get(seipp_api.listar.processos)
       ]);
-    }).then(() => {
+    }).then((dados) => {
+      console.log(dados[2]);
       /** Adicioan a tabela na tela do sei */
       console.log("************ DADOS FINALIZADOS ***************");
       $progressbar.hide();
