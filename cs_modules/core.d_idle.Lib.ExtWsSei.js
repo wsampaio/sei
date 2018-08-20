@@ -193,10 +193,11 @@ function __isInGroup(group, value) {
 
 /****** Métodos que usam get *******/
 
-/** @type {{id: number, x: string}} */
-var lprocesso = {
+
+const __Ret_ProcessoListar = {
   /** @type {number} Id do processo */
   id: -1,
+  /** @type {string} Número do processo com máscara */
   numDoc: "",
   tipo: "",
   especificacao: "",
@@ -221,9 +222,9 @@ var lprocesso = {
 /**
  * Pega a lista de processos.
  * @param {string} resp html de retorno do fetch.
- * @returns {lprocesso}
+ * @returns {__Ret_ProcessoListar[]}
  */
-function __Get_ProcessoListar(resp) {
+function __Get_ProcessoListar(resp, paginar = true) {
   return new Promise((resolve, reject) => {
     var $html = $($.parseHTML(resp));
     var confOrig = { tipoVisualizacao: "", meusProcessos: "", idMarcador: "" };
@@ -234,27 +235,26 @@ function __Get_ProcessoListar(resp) {
     confOrig.meusProcessos = confOrig.meusProcessos == "" ? 'T' : confOrig.meusProcessos;
     /** filtrado por Marcador > filtrarMarcador(null) -> hdnIdMarcador110000002 = valor ???? */
     confOrig.idMarcador = $html.find("input[id^='hdnIdMarcador']").val();
-    console.log(confOrig);
     /** Se estiver filtrado tem que remover os filtros e buscar a página novamente */
-    if (confOrig.meusProcessos == "M" || confOrig.idMarcador != "") {
+    if (confOrig.meusProcessos == "M" || confOrig.idMarcador != "" || confOrig.tipoVisualizacao == "R") {
       /** Fazer um post na página */
       var post_data = { tipoVisualizacao: "D", meusProcessos: "T", idMarcador: "" }
-      ext_ws_post(seipp_api.listar.processos, post_data, null, resp).then(__Get_ProcessoListar).then(ret => {
+      ext_ws_post(seipp_api.listar.processos, post_data, null, resp).then((resp) => __Get_ProcessoListar(resp)).then(ret => {
         /** Retornar filtros iniciais da tela */
         ext_ws_post(seipp_api.listar.processos, confOrig, null, resp).then(() => {
-          console.log("reconfigurado");
+          console.log("__Get_ProcessoListar: Filtros originais redefinidos.");
         });
         resolve(ret);
       });
     } else {
       var $trows = $html.find("#tblProcessosDetalhado tr[id]");
       var processos = [];
-      console.log($trows);
+
       $trows.each(function (index) {
         var $trow = $(this);
+        /**@type {__Ret_ProcessoListar} */
         var p = {};
-        var x, y;
-        console.log($trow);
+
         p.id = $trow.attr("id").substr(1);
         p.numDoc = $trow.find("td:nth-child(3) > a").text();
         p.linkHash = $trow.find("td:nth-child(3) > a").attr("href");
@@ -296,31 +296,55 @@ function __Get_ProcessoListar(resp) {
 
         processos.push(p);
       });
-      resolve(processos);
+
+      /* Se tiver paginação execulta a busca em todas as paginações */
+      if (paginar && $html.find("#selInfraPaginacaoSuperior > option").length > 0) {
+        var paginaAtual = $html.find("#selInfraPaginacaoSuperior > option[selected]").val();
+        var $PaginacaoOption = $html.find("#selInfraPaginacaoSuperior > option");
+        var arr = [];
+        console.log("Total de páginas: " + $PaginacaoOption.length);
+
+        $PaginacaoOption.each((i, opt) => {
+          if (i != paginaAtual) {
+            arr.push(ext_ws_post(seipp_api.listar.processos, { paginaAtual: i.toString() }, null, resp).then(html => {
+              return __Get_ProcessoListar(html, false);
+            }));
+          }
+        });
+        Promise.all(arr).then(resps => {
+          resolve(resps.reduce((a, c) => a.concat(c), processos));
+        });
+      } else {
+        resolve(processos);
+      }
     }
   });
 }
 function __Post_ProcessoListar(resp, json_data) {
   return new Promise((resolve, reject) => {
-    var excludes = ["ID-9", "chkGeradosItem0"];
+    var excludes = [];
     var $html = $($.parseHTML(resp));
+    var $form = $html.find("#frmProcedimentoControlar");
     var hdnIdMarcador = $html.find("input[id^='hdnIdMarcador']").attr("id");
     var post = { url: "", data: {} };
-    post.url = GetBaseUrl() + $("#frmProcedimentoControlar", $html).attr("action");
+    post.url = GetBaseUrl() + $form.attr("action");
     console.log(hdnIdMarcador);
-    $("#frmProcedimentoControlar [name]", $html).each(function () {
+    $form.find("> [name], > * > [name]").each(function () {
       var name = $(this).attr("name");
       var val = $(this).val();
       if (excludes.find(n => n == name) == undefined && val != undefined) {
         switch (name) {
           case "hdnMeusProcessos":
-            post.data[name] = json_data.meusProcessos;
+            post.data[name] = isUndefined(json_data.meusProcessos, val);
             break;
           case hdnIdMarcador:
-            post.data[name] = json_data.idMarcador;
+            post.data[name] = isUndefined(json_data.idMarcador, val);
             break;
           case "hdnTipoVisualizacao":
-            post.data[name] = json_data.tipoVisualizacao;
+            post.data[name] = isUndefined(json_data.tipoVisualizacao, val);
+            break;
+          case "hdnInfraPaginaAtual":
+            post.data[name] = isUndefined(json_data.paginaAtual, val);
             break;
           default:
             post.data[name] = val;
