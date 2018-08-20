@@ -196,15 +196,15 @@ function __isInGroup(group, value) {
 /** @type {{id: number, x: string}} */
 var lprocesso = {
   /** @type {number} Id do processo */
-  idProcedimento: -1,
+  id: -1,
   numDoc: "",
-  tipoProcesso: "",
+  tipo: "",
   especificacao: "",
   linkHash: "",
-  usuarioAtribuido: "",
+  atribuido: "",
   anotacao: {
     descricao: "",
-    nomeUsuario: "",
+    usuario: "",
     prioridade: false,
   },
   marcador: {
@@ -213,8 +213,10 @@ var lprocesso = {
     descricao: ""
   },
   pontoControle: "",
-  processoVisualizado: false,
-  processoVisitado: false
+  status: {
+    visualizado: false,
+    visitado: false
+  }
 }
 /**
  * Pega a lista de processos.
@@ -248,39 +250,50 @@ function __Get_ProcessoListar(resp) {
       var $trows = $html.find("#tblProcessosDetalhado tr[id]");
       var processos = [];
       console.log($trows);
-      $trows.each(function(index) {
+      $trows.each(function (index) {
         var $trow = $(this);
         var p = {};
         var x, y;
         console.log($trow);
-        p.idProcedimento = $trow.attr("id").substr(1);
+        p.id = $trow.attr("id").substr(1);
         p.numDoc = $trow.find("td:nth-child(3) > a").text();
         p.linkHash = $trow.find("td:nth-child(3) > a").attr("href");
+        p.especificacao = /\'([^\,]*)\'/.exec($trow.find("td:nth-child(3) > a").attr("onmouseover"))[1];
+        p.tipo = $trow.find("td:nth-child(5)").text();
+        p.atribuido = $trow.find("td:nth-child(4) > a").text();
 
-        p.especificacao = $trow.find("td:nth-child(3) > a").attr("onmouseover");
-        x = p.especificacao.indexOf("'") + 1;
-        y = p.especificacao.indexOf("'", x);
-        p.especificacao = p.especificacao.substring(x, y);
-
-        p.tipoProcesso = $trow.find("td:nth-child(5)").text();
-        p.usuarioAtribuido = $trow.find("td:nth-child(4) > a").text();
-
-        var anotacao = $trow.find("td:nth-child(2) > a[href^='controlador.php?acao=anotacao_registrar']").attr("onmouseover");
-        if (anotacao != undefined) {
+        var $anotacao = $trow.find("td:nth-child(2) > a[href^='controlador.php?acao=anotacao_registrar']");
+        p.anotacao = null;
+        if ($anotacao.length > 0) {
+          var regex = /\'([^\,]*)\'/g;
+          var tx = $anotacao.attr("onmouseover");
           p.anotacao = {};
-          p.anotacao.descricao = $trow.find("td:nth-child(2) > a[href^='controlador.php?acao=anotacao_registrar']").attr("onmouseover");
-          p.anotacao.nomeUsuario = "";
-          p.anotacao.prioridade = "";
+          p.anotacao.descricao = regex.exec(tx)[1];
+          p.anotacao.usuario = regex.exec(tx)[1];
+          p.anotacao.prioridade = $anotacao.find("img[src*='prioridade']").length > 0 ? true : false;
         }
 
-        p.marcador = {};
-        p.marcador.nome = "";
-        p.marcador.cor = "";
-        p.marcador.descricao = "";
+        var $marcador = $trow.find("td:nth-child(2) > a[href^='controlador.php?acao=andamento_marcador_gerenciar']");
+        p.marcador = null;
+        if ($marcador.length > 0) {
+          var regex = /\'([^\,]*)\'/g;
+          var tx = $marcador.attr("onmouseover");
+          p.marcador = {};
+          p.marcador.descricao = regex.exec(tx)[1];
+          p.marcador.nome = regex.exec(tx)[1];
+          p.marcador.cor = /\_(.*)\./.exec($marcador.find("img").attr("src"))[1];
+        }
 
-        p.pontoControle = "";
-        p.processoVisualizado = "";
-        p.processoVisitado = "";
+        var $pontoControle = $trow.find("td:nth-child(2) > a[href^='controlador.php?acao=andamento_situacao_gerenciar']");
+        p.pontoControle = null;
+        if ($pontoControle.length > 0) {
+          p.pontoControle = /\'([^\,]*)\'/.exec($pontoControle.attr("onmouseover"))[1];
+        }
+
+        p.status = {};
+        p.status.visualizado = $trow.find("td:nth-child(3) > a.processoVisualizado").length > 0 ? true : false;
+        p.status.visitado = $trow.find("td:nth-child(3) > a.processoVisitado").length > 0 ? true : false;
+
         processos.push(p);
       });
       resolve(processos);
