@@ -97,10 +97,40 @@ function ControleGerencial() {
         //     });
         //   }, Promise.resolve());
         // })
-        ext_ws_get(seipp_api.listar.processos)
+        ext_ws_get(seipp_api.listar.processos).then(listaProcessos => {
+          console.log("Lista de processos:", listaProcessos);
+          if (listaProcessos.length == 0) {
+            $progressbar.progressbar("value", 100);
+          } else {
+            progressbar_val = 100.0 / listaProcessos.length;
+          }
+          return listaProcessos.reduce(function (sequence, processo) {
+            return sequence.then(function () {
+              if (processo.status.visualizado) {
+                /** Pega informações extras */
+                return ext_ws_get(seipp_api.processo.consultar, processo.linkHash).then(function (proc) {
+                  console.log(proc);
+                  return Promise.all([
+                    ext_ws_get(seipp_api.processo.consultar_dados, proc),
+                    ext_ws_get(seipp_api.processo.marcador, proc),
+                    ext_ws_get(seipp_api.processo.acompanhamento, proc),
+                    ws_get(wsapi.processo.listar_ciencia, null, processo.id)
+                  ]).then(dados => {
+                    return Promise.resolve({ processo: proc, dados: dados[0], marcador: dados[1], acompanhamento: dados[2], ciencias: dados[3] })
+                  });
+                });
+              } else {
+                return Promise.resolve(null);
+              }
+            }).then(function (DadosExtras) {
+              $progressbar.progressbar("value", $progressbar.progressbar("value") + progressbar_val);
+              //TabelaAdicinarProcesso(processo, DadosExtras);
+            });
+          }, Promise.resolve());
+        })
       ]);
     }).then((dados) => {
-      console.log(dados[2]);
+      //console.log(dados[2]);
       /** Adicioan a tabela na tela do sei */
       console.log("************ DADOS FINALIZADOS ***************");
       $progressbar.hide();

@@ -30,9 +30,10 @@ function ext_ws_post(apirest, json_data, opt_data = null, resp = null) {
       if (resp != null) {
         ExecPost = Promise.resolve(resp);
       } else if (__isInGroup(seipp_api.processo, apirest) && opt_data != null) {
+        /* opt_data corresponde a resposta de consulta do processo = proc */
         ExecPost = Promise.resolve(opt_data).then(proc => {
           /** Pega o link para buscar os dados */
-          var link = proc.LinkComandos.reduce((acc, cur, i) => {
+          var link = GetBaseUrl() + proc.LinkComandos.reduce((acc, cur) => {
             if (cur.indexOf(apirest) != -1) acc = cur;
             return acc;
           });
@@ -70,7 +71,7 @@ function ext_ws_post(apirest, json_data, opt_data = null, resp = null) {
           /** Envia o post da requisição */
           console.log(seipp_api_name + "POST " + apirest + " > " + post.url, post.data);
           post.data = postEncodeURI(post.data);
-          return fetch(post.url, {
+          return fetch(GetBaseUrl() + post.url, {
             body: post.data,
             headers: { 'content-type': 'application/x-www-form-urlencoded' },
             method: 'POST'
@@ -121,7 +122,7 @@ function ext_ws_get(apirest, params = null, id_url = null) {
           if (params != null && params != "") {
             link = params;
           } else if (id_url != null) {
-            link = GetBaseUrl() + "controlador.php?acao=procedimento_trabalhar&id_procedimento=" + id_url;
+            link = "controlador.php?acao=procedimento_trabalhar&id_procedimento=" + id_url;
           } else {
             throw new Error("IdProcesso não informado");
           }
@@ -140,12 +141,13 @@ function ext_ws_get(apirest, params = null, id_url = null) {
           }
         }
       } else { /** comandos do menu */
-        link = GetBaseUrl() + $("#main-menu li a[href^='controlador.php?acao=" + apirest + "']").attr("href");
+        link = $("#main-menu li a[href^='controlador.php?acao=" + apirest + "']").attr("href");
       }
     } else {
       throw new Error("Api não implementada: " + apirest);
     }
     /** Execulta a consulta */
+    link = GetBaseUrl() + link;
     console.log(seipp_api_name + "GET " + apirest + " > " + link);
     return fetch(link, { method: 'GET' });
   }).then(function (response) {
@@ -215,6 +217,7 @@ const __Ret_ProcessoListar = {
   },
   pontoControle: "",
   status: {
+    /** @type {boolean} Indica se o processo foi recebido na unidade */
     visualizado: false,
     visitado: false
   }
@@ -327,7 +330,7 @@ function __Post_ProcessoListar(resp, json_data) {
     var $form = $html.find("#frmProcedimentoControlar");
     var hdnIdMarcador = $html.find("input[id^='hdnIdMarcador']").attr("id");
     var post = { url: "", data: {} };
-    post.url = GetBaseUrl() + $form.attr("action");
+    post.url = $form.attr("action");
     console.log(hdnIdMarcador);
     $form.find("> [name], > * > [name]").each(function () {
       var name = $(this).attr("name");
@@ -380,7 +383,7 @@ function __ProcessoConsultar(resp) {
 
     var linkArvore = $("#ifrArvore", $html).attr("src");
     if (linkArvore != undefined) {
-      linkArvore = GetBaseUrl() + linkArvore;
+      linkArvore = linkArvore;
       resolve(ext_ws_get(seipp_api.processo.consultar, linkArvore));
     } else {
       /** Pega os links dos camandos do processo */
@@ -390,7 +393,7 @@ function __ProcessoConsultar(resp) {
       var $html2 = $($.parseHTML(resp.substring(x, y)));
       $html2.each(function (i, tag) {
         var href = $(tag).attr("href");
-        if (href != "#") Processo.LinkComandos.push(GetBaseUrl() + href);
+        if (href != "#") Processo.LinkComandos.push(href);
       });
       if (Processo.LinkComandos.length < 1) {
         throw new Error("Link de comandos do processo não encontrado.");
@@ -542,7 +545,7 @@ function __ProcessoCadastrarMarcador_Post(resp, json_data) {
     var excludes = ["selMarcador"];
     var $html = $($.parseHTML(resp));
     var post = { url: "", data: {} };
-    post.url = GetBaseUrl() + $("#frmGerenciarMarcador", $html).attr("action");
+    post.url = $("#frmGerenciarMarcador", $html).attr("action");
 
     $("#frmGerenciarMarcador [name]", $html).each(function () {
       var name = $(this).attr("name");
@@ -604,10 +607,10 @@ function __ProcessoAcompanhamentoCadastrarAlterar_Post(resp, json_data) {
       var x, y;
       x = resp.indexOf("controlador.php?acao=acompanhamento_excluir");
       y = resp.indexOf("'", x);
-      post.url = GetBaseUrl() + resp.substring(x, y);
+      post.url = resp.substring(x, y);
       excludes.push("sbmAlterarAcompanhamento");
     } else {
-      post.url = GetBaseUrl() + $("#frmAcompanhamentoCadastro", $html).attr("action");
+      post.url = $("#frmAcompanhamentoCadastro", $html).attr("action");
     }
 
     $("#frmAcompanhamentoCadastro [name]", $html).each(function () {
