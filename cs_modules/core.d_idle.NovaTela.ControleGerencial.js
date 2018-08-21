@@ -76,7 +76,7 @@ function ControleGerencial() {
           if (listaProcessos.length == 0) {
             $progressbar.progressbar("value", 100);
           } else {
-            progressbar_val = 100.0 / listaProcessos.length;
+            progressbar_val = 100.0 / listaProcessos.reduce((a, b) => b.status.visualizado ? a + 1 : a, 0);
           }
           listaProcessos.forEach(processo => {
             processo.$trrow = TabelaPreencherLista(processo);
