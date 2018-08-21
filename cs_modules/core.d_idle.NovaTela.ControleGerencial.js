@@ -67,36 +67,7 @@ function ControleGerencial() {
           GrupoAcompanhamentos = grupoacomp;
           console.log("GrupoAcompanhamentos: ", GrupoAcompanhamentos);
         }),
-        // /** Pega a lista de processos da unidade e os dados dos processos */
-        // Promise.all([ws_get(wsapi.processo.listar, "tipo=R&limit=100000"), ws_get(wsapi.processo.listar, "tipo=G&limit=100000")]).then(jsons => {
-        //   jsons.forEach((json) => dataprocessos = dataprocessos.concat(json));
-        //   console.log("Lista de processos:", dataprocessos);
-        //   if (dataprocessos.length == 0) {
-        //     $progressbar.progressbar("value", 100);
-        //   } else {
-        //     progressbar_val = 100.0 / dataprocessos.length;
-        //   }
-        //   return dataprocessos.reduce(function (sequence, processo) {
-        //     return sequence.then(function () {
-        //       console.log(processo.atributos.status, processo);
-        //       return Promise.resolve();
-        //       /** Pega informações extras */
-        //       // return ext_ws_get(seipp_api.processo.consultar, null, processo.atributos.idProcedimento).then(function (proc) {
-        //       //   return Promise.all([
-        //       //     ext_ws_get(seipp_api.processo.consultar_dados, proc),
-        //       //     ext_ws_get(seipp_api.processo.marcador, proc),
-        //       //     ext_ws_get(seipp_api.processo.acompanhamento, proc),
-        //       //     ws_get(wsapi.processo.listar_ciencia, null, processo.atributos.idProcedimento)
-        //       //   ]).then(dados => {
-        //       //     return Promise.resolve({ processo: proc, dados: dados[0], marcador: dados[1], acompanhamento: dados[2], ciencias: dados[3] })
-        //       //   });
-        //       // });
-        //     }).then(function (DadosExtras) {
-        //       $progressbar.progressbar("value", $progressbar.progressbar("value") + progressbar_val);
-        //       //TabelaAdicinarProcesso(processo, DadosExtras);
-        //     });
-        //   }, Promise.resolve());
-        // })
+        /** Pega a lista de processos da unidade e os dados dos processos */
         ext_ws_get(seipp_api.listar.processos).then(listaProcessos => {
           console.log("Lista de processos:", listaProcessos);
           if (listaProcessos.length == 0) {
@@ -104,32 +75,35 @@ function ControleGerencial() {
           } else {
             progressbar_val = 100.0 / listaProcessos.length;
           }
-          return listaProcessos.reduce(function (sequence, processo) {
-            return sequence.then(function () {
-              if (processo.status.visualizado) {
-                /** Pega informações extras */
-                return ext_ws_get(seipp_api.processo.consultar, processo.linkHash).then(function (proc) {
-                  console.log(proc);
-                  return Promise.all([
-                    ext_ws_get(seipp_api.processo.consultar_dados, proc),
-                    ext_ws_get(seipp_api.processo.marcador, proc),
-                    ext_ws_get(seipp_api.processo.acompanhamento, proc),
-                    ws_get(wsapi.processo.listar_ciencia, null, processo.id)
-                  ]).then(dados => {
-                    return Promise.resolve({ processo: proc, dados: dados[0], marcador: dados[1], acompanhamento: dados[2], ciencias: dados[3] })
-                  });
-                });
-              } else {
-                return Promise.resolve(null);
-              }
-            }).then(function (DadosExtras) {
-              $progressbar.progressbar("value", $progressbar.progressbar("value") + progressbar_val);
-              //TabelaAdicinarProcesso(processo, DadosExtras);
-            });
-          }, Promise.resolve());
+          listaProcessos.forEach(processo => {
+            processo.$trrow = TabelaPreencherLista(processo);
+          });
+          return listaProcessos;
         })
       ]);
-    }).then((dados) => {
+    }).then(dados => {
+      console.log(dados);
+      return dados[2].reduce(function (sequence, processo) {
+        return sequence.then(function () {
+          if (processo.status.visualizado) {
+            return CarregarDadosProcesso(processo);
+          } else {
+            processo.$trrow.find("#tdprocesso > div:first > a").on("click", function () {
+              $(this).removeClass("processoNaoVisualizado").addClass("processoVisualizado processoVisitado");
+              CarregarDadosProcesso(processo).then(DadosExtras => {
+                return TabelaPreencherDados(processo.$trrow, DadosExtras);
+              }).then();
+            });
+            return Promise.resolve(null);
+          }
+        }).then(function (DadosExtras) {
+          $progressbar.progressbar("value", $progressbar.progressbar("value") + progressbar_val);
+          if (DadosExtras != null) {
+            TabelaPreencherDados(processo.$trrow, DadosExtras);
+          }
+        });
+      }, Promise.resolve());
+    }).then(() => {
       //console.log(dados[2]);
       /** Adicioan a tabela na tela do sei */
       console.log("************ DADOS FINALIZADOS ***************");
@@ -236,33 +210,141 @@ function ControleGerencial() {
       });
     }
 
+    function TabelaPreencherLista(processo) {
+      var $tbody = $("tbody", $tabela);
+      /** Cria uma nova linha na tabela */
+      var $trrow = $("<tr/>");
+
+      /** Processo / Observação da unidade */
+      $processo_obs_unidade = $("<div/>");
+      var $processo = $("<td/>")
+        .attr("id", "tdprocesso")
+        .append($("<div/>")
+          .attr("id", "proc" + processo.id)
+          .attr("title", processo.tipo)
+          .append($("<a/>")
+            .attr("href", "controlador.php?acao=procedimento_trabalhar&id_procedimento=" + processo.id)
+            .attr("target", "_blank")
+            .text(processo.numDoc))
+          .append($('<img id="aguarde" src="/infra_css/imagens/aguarde_pequeno.gif" />').hide()))
+        .append($processo_obs_unidade);
+      $trrow.append($processo);
+      if (processo.status.visualizado) {
+        $processo.find("div[id^='proc'] > a").addClass('processoVisualizado');
+      } else {
+        $processo.find("div[id^='proc'] > a").addClass('processoNaoVisualizado');
+      }
+      if (processo.status.visitado) {
+        $processo.find("div[id^='proc'] > a").addClass('processoVisitado');
+      }
+
+      /** (HIDE) Tipo de processo */
+      $trrow.append($("<td/>").append($("<div/>").text(processo.tipo)));
+
+      /** Anotação */
+      var $anotacao = $("<div/>").addClass("anotacao").attr("idproc", processo.id);
+      var $nova_anotacao = $("<div/>").addClass("centralizado").append("<button/>");
+      var $tdanotacao = $("<td/>").attr("id", "tdanotacao").append($anotacao, $nova_anotacao);
+
+      if (processo.anotacao != null) {
+        $anotacao.text(processo.anotacao.descricao)
+          .attr("prioridade", processo.anotacao.prioridade ? true : false);
+      } else {
+        $anotacao.hide();
+      }
+      $nova_anotacao.hide();
+
+      $("button", $nova_anotacao).button({ icon: "ui-icon-plus" }).on("click", () => $anotacao.trigger("dblclick"));
+      $trrow.append($tdanotacao);
+
+      /** (Marcador) Despacho da autoridade */
+      var $marcador = $("<div/>").addClass("marcador").attr("idproc", processo.id);
+      var $novo_marcador = $("<div/>").addClass("centralizado").append("<button/>");
+      var $tdmarcador = $("<td/>").attr("id", "tdmarcador").append($marcador, $novo_marcador);
+
+      $marcador.append($("<div/>").attr("id", "img")
+        .append($("<img/>"))
+        .append($("<label/>"))
+      );
+      $marcador.append($("<div/>").attr("id", "text"));
+      if (processo.marcador != null) {
+        $marcador.find("#img > img")
+          .attr("src", "imagens/marcador_" + processo.marcador.cor + ".png")
+          .attr("title", processo.marcador.nome);
+        $marcador.find("#img > label")
+          .text(processo.marcador.nome);
+        $marcador.find("#text").text(processo.marcador.descricao);
+      } else {
+        $marcador.find("#img").hide();
+        $marcador.hide();
+      }
+      $novo_marcador.hide();
+      $("button", $novo_marcador).button({ icon: "ui-icon-plus" }).on("click", () => {
+        if (Marcadores.length > 0) {
+          $marcador.trigger("dblclick");
+        } else {
+          alert("Não existem marcadores para adicionar!");
+        }
+      });
+
+      $trrow.append($tdmarcador);
+
+      /** Acompanhamento Especial */
+      var $acompanhamento = $("<div/>").addClass("acompanhamento").attr("idproc", processo.id).attr("idacomp", "-1").hide();
+      var $novo_acompanhamento = $("<div/>").addClass("centralizado").append("<button/>").hide();
+      var $tdacompanhamento = $("<td/>").attr("id", "tdacompanhamento").append($acompanhamento, $novo_acompanhamento);
+
+      $acompanhamento.append($("<div/>").attr("id", "img")
+        .append($("<img/>"))
+        .append($("<label/>"))
+      );
+      $acompanhamento.append($("<div/>").attr("id", "text"));
+
+      $("button", $novo_acompanhamento).button({ icon: "ui-icon-plus" }).on("click", () => {
+        $acompanhamento.trigger("dblclick");
+      });
+
+      $acompanhamento.on("dblclick", dblclick_acompanhamento);
+      $trrow.append($tdacompanhamento);
+
+      /** Açoes */
+      var $acoes = $("<td/>").attr('id', 'tdacoes');
+      var $acao_acompanhamento = $("<div/>");
+      var $acao_concluir = $("<div/>");
+
+      $acao_acompanhamento.append($("<img/>").attr("src", "imagens/sei_acompanhamento_especial_pequeno.png"))
+        .attr("idproc", processo.id)
+        .on("click", click_acao_acompanhamento)
+        .hide();
+      $acao_concluir.append($("<img/>").attr("src", "imagens/sei_concluir_processo.gif"))
+        .attr("idproc", processo.numDoc)
+        .on("click", click_acao_concluir)
+        .hide();
+
+      $acoes.append($acao_acompanhamento, $acao_concluir);
+      $trrow.append($acoes);
+
+      /** FIM */
+      $tbody.append($trrow);
+      /* Atualiza a tabela */
+      $tabela.trigger("update");
+      return $trrow;
+    }
     /**
      *
      * @param {ws_ProcessoListar} processo
      * @param {*} DadosExtras
      */
-    function TabelaAdicinarProcesso(processo, DadosExtras) {
-      var $tbody = $("tbody", $tabela);
-      /** Inclui os dados na tabela */
-      var $trrow = $("<tr/>");
+    function TabelaPreencherDados($trrow, DadosExtras) {
       /** Processo / Observação da unidade */
-      $processo_obs_unidade = $("<div/>");
+      var $processo_obs_unidade = $trrow.find('td:first > div:nth-child(2)');
       if (DadosExtras.dados.ObservacaoOutrasUnidades.length) {
         var obs_unidade = DadosExtras.dados.ObservacaoOutrasUnidades[DadosExtras.dados.ObservacaoOutrasUnidades.length - 1];
         $processo_obs_unidade.text(obs_unidade.observacao).attr("title", "Observação da unidade: " + obs_unidade.unidade);
       } else if (DadosExtras.dados.Observacao != "") {
         $processo_obs_unidade.text(DadosExtras.dados.Observacao).attr("title", "Observação da unidade atual.");
       }
-      var $processo = $("<td/>")
-        .append($("<div/>")
-          .attr("id", "proc" + processo.atributos.idProcedimento)
-          .attr("title", processo.atributos.tipoProcesso)
-          .append($("<a/>")
-            .attr("href", "controlador.php?acao=procedimento_trabalhar&id_procedimento=" + processo.id)
-            .attr("target", "_blank")
-            .text(processo.atributos.numero)))
-        .append($processo_obs_unidade);
-      $trrow.append($processo);
+      /* Preenche as flags do processo */
       if (DadosExtras.processo.Flags.Restrito != null) {
         $("div[id^='proc']", $trrow).append($("<img/>")
           .attr("src", "imagens/sei_chave_restrito.gif")
@@ -297,70 +379,26 @@ function ControleGerencial() {
         $ciencia.attr("title", list_ciencia);
         $("div[id^='proc']", $trrow).append($ciencia);
       }
-      /** (HIDE) Tipo de processo */
-      $trrow.append($("<td/>").append($("<div/>").text(processo.atributos.tipoProcesso)));
 
-      /** (Anotação) Sugestão de encaminhamento */
-      var $anotacao = $("<div/>").addClass("anotacao").attr("idproc", processo.atributos.idProcedimento);
-      var $nova_anotacao = $("<div/>").addClass("centralizado").append("<button/>");
-      var $tdanotacao = $("<td/>").attr("id", "tdanotacao").append($anotacao, $nova_anotacao);
-
-      if (processo.atributos.anotacoes.length > 0) {
-        $nova_anotacao.hide();
-        $anotacao.text(processo.atributos.anotacoes[0].descricao)
-          .attr("prioridade", processo.atributos.anotacoes[0].sinPrioridade == "S" ? true : false);
-      } else {
-        $anotacao.hide();
-      }
-
-      $("button", $nova_anotacao).button({ icon: "ui-icon-plus" }).on("click", () => $anotacao.trigger("dblclick"));
+      /* Anotação já retornado pela lista de processos */
+      var $anotacao = $trrow.find('#tdanotacao > div.anotacao');
+      var $nova_anotacao = $trrow.find('#tdanotacao > div.centralizado');
       $anotacao.on("dblclick", dblclick_anotacao);
-      $trrow.append($tdanotacao);
+      if (!$anotacao.is(':visible')) { $nova_anotacao.show(); }
 
-      /** (Marcador) Despacho da autoridade */
-      var $marcador = $("<div/>").addClass("marcador").attr("idproc", processo.atributos.idProcedimento);
-      var $novo_marcador = $("<div/>").addClass("centralizado").append("<button/>");
-      var $tdmarcador = $("<td/>").attr("id", "tdmarcador").append($marcador, $novo_marcador);
-
-      $marcador.append($("<div/>").attr("id", "img")
-        .append($("<img/>"))
-        .append($("<label/>"))
-      );
-      $marcador.append($("<div/>").attr("id", "text"));
-      if (DadosExtras.processo.Flags.Marcador.Nome != null) {
-        $novo_marcador.hide();
-        $marcador.find("#img > img")
-          .attr("src", "imagens/marcador_" + DadosExtras.processo.Flags.Marcador.Cor + ".png")
-          .attr("title", DadosExtras.processo.Flags.Marcador.Nome);
-        $marcador.find("#img > label")
-          .text(DadosExtras.processo.Flags.Marcador.Nome);
-        $marcador.find("#text").text(DadosExtras.marcador.texto);
-      } else {
-        $marcador.find("#img").hide();
-        $marcador.hide();
-      }
-      $("button", $novo_marcador).button({ icon: "ui-icon-plus" }).on("click", () => {
-        if (Marcadores.length > 0) {
-          $marcador.trigger("dblclick");
-        } else {
-          alert("Não existem marcadores para adicionar!");
-        }
-      });
+      /* Marcador já retornado pela lista de processos */
+      var $marcador = $trrow.find('#tdmarcador > div.marcador');
+      var $novo_marcador = $trrow.find('#tdmarcador > div.centralizado');
       $marcador.on("dblclick", dblclick_marcador);
-      $trrow.append($tdmarcador);
+      if (!$marcador.is(':visible')) { $novo_marcador.show(); }
 
       /** Acompanhamento Especial */
-      var $acompanhamento = $("<div/>").addClass("acompanhamento").attr("idproc", processo.atributos.idProcedimento).attr("idacomp", DadosExtras.acompanhamento.id);
-      var $novo_acompanhamento = $("<div/>").addClass("centralizado").append("<button/>");
-      var $tdacompanhamento = $("<td/>").attr("id", "tdacompanhamento").append($acompanhamento, $novo_acompanhamento);
+      var $acompanhamento = $trrow.find("#tdacompanhamento div.acompanhamento");
+      var $novo_acompanhamento = $trrow.find("#tdacompanhamento div.centralizado");
 
-      $acompanhamento.append($("<div/>").attr("id", "img")
-        .append($("<img/>"))
-        .append($("<label/>"))
-      );
-      $acompanhamento.append($("<div/>").attr("id", "text"));
       if (DadosExtras.acompanhamento.id != -1) {
         $novo_acompanhamento.hide();
+        $acompanhamento.attr('idacomp', DadosExtras.acompanhamento.id);
         $acompanhamento.find("#img > img")
           .attr("src", "imagens/sei_acompanhamento_especial_pequeno.png")
           .attr("title", "Acompanhamento Especial");
@@ -369,36 +407,39 @@ function ControleGerencial() {
             .text(DadosExtras.acompanhamento.grupo.nome);
         }
         $acompanhamento.find("#text").text(DadosExtras.acompanhamento.observacao);
+        $acompanhamento.show()
       } else {
         $acompanhamento.find("#img").hide();
         $acompanhamento.hide();
+        $novo_acompanhamento.show();
       }
-      $("button", $novo_acompanhamento).button({ icon: "ui-icon-plus" }).on("click", () => {
-        $acompanhamento.trigger("dblclick");
-      });
-
-      $acompanhamento.on("dblclick", dblclick_acompanhamento);
-      $trrow.append($tdacompanhamento);
 
       /** Açoes */
-      var $acoes = $("<td/>");
-      var $acao_acompanhamento = $("<div/>");
-      var $acao_concluir = $("<div/>");
+      $trrow.find("#tdacoes > div").show();
 
-      $acao_acompanhamento.append($("<img/>").attr("src", "imagens/sei_acompanhamento_especial_pequeno.png"))
-        .attr("idproc", processo.atributos.idProcedimento)
-        .on("click", click_acao_acompanhamento);
-      $acao_concluir.append($("<img/>").attr("src", "imagens/sei_concluir_processo.gif"))
-        .attr("idproc", processo.atributos.numero)
-        .on("click", click_acao_concluir);
-
-      $acoes.append($acao_acompanhamento, $acao_concluir);
-      $trrow.append($acoes);
-
-      /** FIM */
-      $tbody.append($trrow);
       /* Atualiza a tabela */
+      $trrow.find("#tdprocesso #aguarde").hide()
       $tabela.trigger("update");
+    }
+    /**
+     *
+     * @param {*} processo
+     */
+    function CarregarDadosProcesso(processo) {
+      var linkHashProcesso = processo.linkHash
+      /** Pega informações extras */
+      processo.$trrow.find("#tdprocesso #aguarde").show();
+      return ext_ws_get(seipp_api.processo.consultar, linkHashProcesso).then(function (proc) {
+        console.log(proc);
+        return Promise.all([
+          ext_ws_get(seipp_api.processo.consultar_dados, proc),
+          ext_ws_get(seipp_api.processo.marcador, proc),
+          ext_ws_get(seipp_api.processo.acompanhamento, proc),
+          ws_get(wsapi.processo.listar_ciencia, null, proc.id)
+        ]).then(dados => {
+          return Promise.resolve({ processo: proc, dados: dados[0], marcador: dados[1], acompanhamento: dados[2], ciencias: dados[3] })
+        });
+      });
     }
 
     function dblclick_anotacao() {
@@ -505,10 +546,11 @@ function ControleGerencial() {
       function Salvar() {
         var Marcador = {
           id: $select.val(),
-          idProcesso: $marcador.attr("idproc"),
           texto: $textarea.val()
         }
-        ext_ws_post(seipp_api.processo.marcador, Marcador).then(ret => {
+        ext_ws_get(seipp_api.processo.consultar, null, $marcador.attr("idproc")).then(
+          proc => ext_ws_post(seipp_api.processo.marcador, Marcador, proc)
+        ).then(ret => {
           $throw = $marcador.parent().parent();
           if (Marcador.id == "") { /** Remover o marcador */
             $marcador.find("#img").hide();
@@ -601,11 +643,12 @@ function ControleGerencial() {
         } else { /** Alterar acompanhamento */
           var acomp = {
             id: id,
-            idProcesso: Acompanhamento.protocolo,
             grupo: Acompanhamento.grupo,
             observacao: Acompanhamento.observacao
           }
-          ws = ext_ws_post(seipp_api.processo.acompanhamento, acomp);
+          ws = ext_ws_get(seipp_api.processo.consultar, null, Acompanhamento.protocolo).then(
+            proc => ext_ws_post(seipp_api.processo.acompanhamento, acomp, proc)
+          );
           console.log("Alterar o acompanhamento");
         }
         ws.then(ret => {
@@ -652,7 +695,9 @@ function ControleGerencial() {
           idProcesso: $acompanhamento.attr("idproc"),
           excluir: true
         };
-        ext_ws_post(seipp_api.processo.acompanhamento, Acomp).then(ret => {
+        ext_ws_get(seipp_api.processo.consultar, $acompanhamento.attr("idproc")).then(
+          proc => ext_ws_post(seipp_api.processo.acompanhamento, Acomp, proc)
+        ).then(ret => {
           $throw = $acompanhamento.parent().parent();
 
           $acompanhamento.attr("idacomp", "-1");

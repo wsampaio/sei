@@ -47,9 +47,6 @@
 }
 
 /** links **/
-#TabelaGR a, #TabelaGR a:link {
-  color: blue;
-}
 #TabelaGR a:hover {
   color: #00539f;
 }
