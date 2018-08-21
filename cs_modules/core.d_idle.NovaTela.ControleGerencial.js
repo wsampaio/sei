@@ -70,6 +70,9 @@ function ControleGerencial() {
         /** Pega a lista de processos da unidade e os dados dos processos */
         ext_ws_get(seipp_api.listar.processos).then(listaProcessos => {
           console.log("Lista de processos:", listaProcessos);
+          listaProcessos.sort(
+            (a, b) => !a.status.visualizado && b.status.visualizado ? 1 : a.status.visualizado && !b.status.visualizado ? -1 : 0
+          );
           if (listaProcessos.length == 0) {
             $progressbar.progressbar("value", 100);
           } else {
