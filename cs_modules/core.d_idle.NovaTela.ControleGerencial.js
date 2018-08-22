@@ -197,7 +197,11 @@ function ControleGerencial() {
         },
         textExtraction: {
           0: function (node, table, cellIndex) {
-            return $("div[title]:first", node).text();
+            if ($(node).find("div[id^='proc'] > a").hasClass("processoVisualizado")) {
+              return 1;
+            } else {
+              return 0;
+            }
           },
           2: function (node, table, cellIndex) {
             var texto = $(node).find("div[class='anotacao']").text();
