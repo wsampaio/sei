@@ -436,6 +436,7 @@ function ControleGerencial() {
       var linkHashProcesso = processo.linkHash
       /** Pega informações extras */
       processo.$trrow.find("#tdprocesso #aguarde").show();
+      processo.$trrow.find("#tdprocesso > div[id^='proc'] > a").addClass("processoVisitado");
       return ext_ws_get(seipp_api.processo.consultar, linkHashProcesso).then(function (proc) {
         console.log(proc);
         return Promise.all([
