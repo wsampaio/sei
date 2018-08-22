@@ -172,7 +172,7 @@ function ext_ws_get(apirest, params = null, id_url = null) {
       case seipp_api.processo.acompanhamento:
         return __ProcessoAcompanhamentoConsultar(resp);
       case seipp_api.marcador.listar:
-        return __MarcadorListar(resp);
+        return __Get_MarcadorListar(resp);
       case seipp_api.listar.processos:
         return __Get_ProcessoListar(resp);
       default:
@@ -640,7 +640,11 @@ function __ProcessoAcompanhamentoCadastrarAlterar_Post(resp, json_data) {
     resolve(post);
   });
 }
-function __MarcadorListar(resp) {
+/**
+ * Busca a lista de marcadores da área.
+ * @param {*} resp
+ */
+function __Get_MarcadorListar(resp) {
   return new Promise((resolve, reject) => {
     var $html = $($.parseHTML(resp));
     var marcadores = [];
@@ -650,7 +654,8 @@ function __MarcadorListar(resp) {
         var marcador = {
           id: $("td:eq(3)", $(this)).text(),
           nome: $("td:eq(2)", $(this)).text(),
-          cor: $("td:eq(1) > a > img", $(this)).attr("src")
+          cor: $("td:eq(1) > a > img", $(this)).attr("src"),
+          ativo: $(this).hasClass("trVermelha") ? false : true
         };
         marcador.cor = marcador.cor.substring(
           marcador.cor.indexOf("_") + 1,

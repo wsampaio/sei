@@ -59,8 +59,8 @@ function ControleGerencial() {
       return Promise.all([
         /** Pega a lista de marcadores */
         ext_ws_get(seipp_api.marcador.listar).then(function (marc) {
-          Marcadores = marc;
-          console.log("marcadores: ", marc);
+          Marcadores = marc.filter(obj => obj.ativo);
+          console.log("marcadores: ", Marcadores);
         }),
         /** Pega a lista de acompanhamento especial */
         ws_get(wsapi.grupoacompanhamento.listar, null, Login.loginData.IdUnidadeAtual).then(function (grupoacomp) {
