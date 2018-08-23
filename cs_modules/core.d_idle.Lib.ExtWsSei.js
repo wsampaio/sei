@@ -8,7 +8,8 @@ var seipp_api = {
     consultar: "__ProcessoConsultar",
     consultar_dados: "procedimento_alterar",
     marcador: "andamento_marcador_gerenciar",
-    acompanhamento: "acompanhamento_cadastrar"
+    acompanhamento: "acompanhamento_cadastrar",
+    enviar: "procedimento_enviar"
   },
   listar: {
     processos: "procedimento_controlar",
@@ -62,8 +63,10 @@ function ext_ws_post(apirest, json_data, opt_data = null, resp = null) {
               return __ProcessoCadastrarMarcador_Post(resp, json_data);
             case seipp_api.processo.acompanhamento:
               return __ProcessoAcompanhamentoCadastrarAlterar_Post(resp, json_data);
+            case seipp_api.processo.enviar:
+              return __Post_ProcessoEnviar(resp, json_data);
             case seipp_api.listar.processos:
-              return __Post_ProcessoListar(resp, json_data);
+              return __Post_ListarProcessos(resp, json_data);
             default:
               return new Error(seipp_api_name + ": Api não implementada");
           }
@@ -174,7 +177,7 @@ function ext_ws_get(apirest, params = null, id_url = null) {
       case seipp_api.marcador.listar:
         return __Get_MarcadorListar(resp);
       case seipp_api.listar.processos:
-        return __Get_ProcessoListar(resp);
+        return __Get_ListarProcessos(resp);
       default:
         throw new Error("Api não implementada");
     }
@@ -190,13 +193,93 @@ function __isInGroup(group, value) {
 }
 
 /****** Métodos que usam post ******/
+/**
+ * Paramentros para envio de processo.
+ * @typedef {object} __Param_ProcessoEnviar
+ * @prop {boolean} manterAberto Manter processo aberto na unidade atual.
+ * @property {boolean} removerAnotacao Remover anotação.
+ * @property {boolean} enviarEmail Enviar e-mail de notificação.
+ * @property {number} prazo Data Certa = 1 ou Prazo em dias = 2
+ * @property {string} dias
+ * @property {boolean} diasUteis
+ * @property {__Param_Unidades[]} unidades Array de unidades
+ */
 
+/**
+* Paramentros para envio de processo.
+* @typedef {object} __Param_Unidades
+* @property {number} id id da unidade.
+* @property {string} nome Nome da unidade.
+*/
+
+/**
+ *
+ * @param {string} resp
+ * @param {__Param_ProcessoEnviar} json_data
+ */
+function __Post_ProcessoEnviar(resp, json_data) {
+  return new Promise((resolve, reject) => {
+    var excludes = [];
+    var $html = $($.parseHTML(resp));
+    var $form = $html.find("#frmAtividadeListar");
+    var post = { url: "", data: {} };
+    post.url = $form.attr("action");
+    $form.find(":input").each(function () {
+      var name = $(this).attr("name");
+      var val = $(this).val();
+      val = Array.isArray(val) ? val[0] : val;
+      if (excludes.find(n => n == name) == undefined && val != undefined) {
+        switch (name) {
+          case "chkSinManterAberto":
+            if (isUndefined(json_data.manterAberto, false)) {
+              post.data[name] = "on";
+            }
+            break;
+          case "chkSinRemoverAnotacoes":
+            if (isUndefined(json_data.removerAnotacao, false)) {
+              post.data[name] = "on";
+            }
+            break;
+          case "chkSinEnviarEmailNotificacao":
+            if (isUndefined(json_data.enviarEmail, false)) {
+              post.data[name] = "on";
+            }
+            break;
+          case "rdoPrazo":
+            post.data[name] = isUndefined(json_data.prazo, val);
+            break;
+          case "txtDias":
+            post.data[name] = isUndefined(json_data.dias, val);
+            break;
+          case "chkSinDiasUteis":
+            if (isUndefined(json_data.diasUteis, false)) {
+              post.data[name] = "on";
+            }
+            break;
+          case "hdnUnidades":
+            post.data[name] = isUndefined(json_data.unidades[0].id, val);
+            break;
+          default:
+            if ($(this).attr('type') == 'checkbox' || $(this).attr('type') == 'radio') {
+              if ($(this).prop("checked")) {
+                post.data[name] = val;
+              }
+            } else {
+              post.data[name] = val;
+            }
+            break;
+        }
+      }
+    });
+    resolve(post);
+  });
+}
 
 
 /****** Métodos que usam get *******/
 
 
-const __Ret_ProcessoListar = {
+const __Ret_ListarProcessos = {
   /** @type {number} Id do processo */
   id: -1,
   /** @type {string} Número do processo com máscara */
@@ -227,7 +310,7 @@ const __Ret_ProcessoListar = {
  * @param {string} resp html de retorno do fetch.
  * @returns {__Ret_ProcessoListar[]}
  */
-function __Get_ProcessoListar(resp, paginar = true) {
+function __Get_ListarProcessos(resp, paginar = true) {
   return new Promise((resolve, reject) => {
     var $html = $($.parseHTML(resp));
     var confOrig = { tipoVisualizacao: "", meusProcessos: "", idMarcador: "" };
@@ -242,7 +325,7 @@ function __Get_ProcessoListar(resp, paginar = true) {
     if (confOrig.meusProcessos == "M" || confOrig.idMarcador != "" || confOrig.tipoVisualizacao == "R") {
       /** Fazer um post na página */
       var post_data = { tipoVisualizacao: "D", meusProcessos: "T", idMarcador: "" }
-      ext_ws_post(seipp_api.listar.processos, post_data, null, resp).then((resp) => __Get_ProcessoListar(resp)).then(ret => {
+      ext_ws_post(seipp_api.listar.processos, post_data, null, resp).then((resp) => __Get_ListarProcessos(resp)).then(ret => {
         /** Retornar filtros iniciais da tela */
         ext_ws_post(seipp_api.listar.processos, confOrig, null, resp).then(() => {
           console.log("__Get_ProcessoListar: Filtros originais redefinidos.");
@@ -310,7 +393,7 @@ function __Get_ProcessoListar(resp, paginar = true) {
         $PaginacaoOption.each((i, opt) => {
           if (i != paginaAtual) {
             arr.push(ext_ws_post(seipp_api.listar.processos, { paginaAtual: i.toString() }, null, resp).then(html => {
-              return __Get_ProcessoListar(html, false);
+              return __Get_ListarProcessos(html, false);
             }));
           }
         });
@@ -323,7 +406,7 @@ function __Get_ProcessoListar(resp, paginar = true) {
     }
   });
 }
-function __Post_ProcessoListar(resp, json_data) {
+function __Post_ListarProcessos(resp, json_data) {
   return new Promise((resolve, reject) => {
     var excludes = [];
     var $html = $($.parseHTML(resp));
