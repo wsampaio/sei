@@ -481,9 +481,10 @@ function ControleGerencial() {
       $dialog.dialog("open");
 
       function Salvar() {
+        var descricao = $dialog.find("textarea").val().replace(/\s+$/g,"");
         ws_token().then(Login => {
           var data = {
-            descricao: $dialog.find("textarea").val(),
+            descricao: descricao,
             protocolo: $anotacao.attr("idproc"),
             unidade: Login.loginData.IdUnidadeAtual,
             usuario: Login.loginData.IdUsuario,
@@ -492,8 +493,7 @@ function ControleGerencial() {
           console.log($dialog.find("input[checked]"));
           return ws_post(wsapi.anotacao, data);
         }).then(function (params) {
-          console.log(params);
-          $anotacao.text($dialog.find("textarea").val());
+          $anotacao.text(descricao);
           if ($dialog.find("input").prop("checked")) {
             $anotacao.attr("prioridade", true);
           } else {
@@ -708,7 +708,7 @@ function ControleGerencial() {
           idProcesso: $acompanhamento.attr("idproc"),
           excluir: true
         };
-        ext_ws_get(seipp_api.processo.consultar, $acompanhamento.attr("idproc")).then(
+        ext_ws_get(seipp_api.processo.consultar, null, $acompanhamento.attr("idproc")).then(
           proc => ext_ws_post(seipp_api.processo.acompanhamento, Acomp, proc)
         ).then(ret => {
           $throw = $acompanhamento.parent().parent();

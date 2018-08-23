@@ -351,10 +351,11 @@ function __Get_ListarProcessos(resp, paginar = true) {
         var $anotacao = $trow.find("td:nth-child(2) > a[href^='controlador.php?acao=anotacao_registrar']");
         p.anotacao = null;
         if ($anotacao.length > 0) {
-          var regex = /\'([^\,]*)\'/g;
+          var regex = /\'([^\']*)\'/g;
           var tx = $anotacao.attr("onmouseover");
           p.anotacao = {};
-          p.anotacao.descricao = regex.exec(tx)[1];
+          p.anotacao.descricao = regex.exec(tx)[1].replace(/\\r\\n/g, "\r\n").replace(/\\n/g, "\n").replace(/\\&/g, "&");
+          p.anotacao.descricao = $($.parseHTML(p.anotacao.descricao)).text();
           p.anotacao.usuario = regex.exec(tx)[1];
           p.anotacao.prioridade = $anotacao.find("img[src*='prioridade']").length > 0 ? true : false;
         }
@@ -362,10 +363,11 @@ function __Get_ListarProcessos(resp, paginar = true) {
         var $marcador = $trow.find("td:nth-child(2) > a[href^='controlador.php?acao=andamento_marcador_gerenciar']");
         p.marcador = null;
         if ($marcador.length > 0) {
-          var regex = /\'([^\,]*)\'/g;
+          var regex = /\'([^\']*)\'/g;
           var tx = $marcador.attr("onmouseover");
           p.marcador = {};
-          p.marcador.descricao = regex.exec(tx)[1];
+          p.marcador.descricao = regex.exec(tx)[1].replace(/\\r\\n/g, "\r\n").replace(/\\n/g, "\n").replace(/\\&/g, "&");
+          p.marcador.descricao = $($.parseHTML(p.marcador.descricao)).text();
           p.marcador.nome = regex.exec(tx)[1];
           p.marcador.cor = /\_(.*)\./.exec($marcador.find("img").attr("src"))[1];
         }
@@ -373,7 +375,7 @@ function __Get_ListarProcessos(resp, paginar = true) {
         var $pontoControle = $trow.find("td:nth-child(2) > a[href^='controlador.php?acao=andamento_situacao_gerenciar']");
         p.pontoControle = null;
         if ($pontoControle.length > 0) {
-          p.pontoControle = /\'([^\,]*)\'/.exec($pontoControle.attr("onmouseover"))[1];
+          p.pontoControle = /\'(.*)\'/.exec($pontoControle.attr("onmouseover"))[1];
         }
 
         p.status = {};
