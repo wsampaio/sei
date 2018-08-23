@@ -252,6 +252,7 @@ function ControleGerencial() {
       var $anotacao = $("<div/>").addClass("anotacao").attr("idproc", processo.id);
       var $nova_anotacao = $("<div/>").addClass("centralizado").append("<button/>");
       var $tdanotacao = $("<td/>").attr("id", "tdanotacao").append($anotacao, $nova_anotacao);
+      $nova_anotacao.find("button").attr("title", "Adicionar anotação");
 
       if (processo.anotacao != null) {
         $anotacao.text(processo.anotacao.descricao)
@@ -268,6 +269,7 @@ function ControleGerencial() {
       var $marcador = $("<div/>").addClass("marcador").attr("idproc", processo.id);
       var $novo_marcador = $("<div/>").addClass("centralizado").append("<button/>");
       var $tdmarcador = $("<td/>").attr("id", "tdmarcador").append($marcador, $novo_marcador);
+      $novo_marcador.find("button").attr("title", "Adicionar marcador");
 
       $marcador.append($("<div/>").attr("id", "img")
         .append($("<img/>"))
@@ -300,6 +302,7 @@ function ControleGerencial() {
       var $acompanhamento = $("<div/>").addClass("acompanhamento").attr("idproc", processo.id).attr("idacomp", "-1").hide();
       var $novo_acompanhamento = $("<div/>").addClass("centralizado").append("<button/>").hide();
       var $tdacompanhamento = $("<td/>").attr("id", "tdacompanhamento").append($acompanhamento, $novo_acompanhamento);
+      $novo_acompanhamento.find("button").attr("title", "Adicionar em Acompanhamento especial");
 
       $acompanhamento.append($("<div/>").attr("id", "img")
         .append($("<img/>"))
@@ -321,10 +324,12 @@ function ControleGerencial() {
 
       $acao_acompanhamento.append($("<img/>").attr("src", "imagens/sei_acompanhamento_especial_pequeno.png"))
         .attr("idproc", processo.id)
+        .attr("title", "Adicionar ou alterar Acompanhamento especial")
         .on("click", click_acao_acompanhamento)
         .hide();
       $acao_concluir.append($("<img/>").attr("src", "imagens/sei_concluir_processo.gif"))
         .attr("idproc", processo.numDoc)
+        .attr("title", "Concluir processo nesta unidade")
         .on("click", click_acao_concluir)
         .hide();
 
