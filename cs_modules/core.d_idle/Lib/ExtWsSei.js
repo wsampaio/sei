@@ -286,7 +286,7 @@ function __Post_UnidadeAlterar(resp, json_data) {
     var $html = $($.parseHTML(resp));
     var $form = $html.find("#frmInfraSelecionarUnidade");
     var post = { url: "", data: {} };
-    post.url = $form.attr("action");
+    post.url = $form.attr("action").replace(GetBaseUrl(),"");
     $form.find(":input").each(function () {
       var name = $(this).attr("name");
       var val = $(this).val();
