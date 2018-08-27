@@ -181,6 +181,23 @@ function ControleGerencial() {
       $throw.append($("<th/>").text("Ações").attr("data-priority", "5").addClass("columnNowrap"));
       $thead.append($throw);
 
+      // var txanotacao1 = "Anotação do processo";
+      // $("#divInfraAreaDados").append("<button>TESTE</button>").find("button").on("click", function () {
+      //   ext_ws_get(seipp_api.processo.consultar, null, "60").then(proc => {
+      //     var post_env = {}
+      //     post_env.manterAberto = false;
+      //     post_env.unidades = [{ id: "110000003", name: "TESTE_1_2" }];
+      //     return ext_ws_post(seipp_api.processo.enviar, post_env, proc).then(resp => {
+      //       var ua_env = {
+      //         idUnidade: "110000003"
+      //       };
+      //       return ext_ws_post(seipp_api.unidade_alterar, ua_env);
+      //     });
+      //   }).then(resp => {
+      //     console.log(resp);
+      //   })
+      // });
+
       /** Aplica o tablesorter */
       $("#divInfraAreaDados").append($comandos, $tabela);
       $tabela.tablesorter({
@@ -481,7 +498,7 @@ function ControleGerencial() {
       $dialog.dialog("open");
 
       function Salvar() {
-        var descricao = $dialog.find("textarea").val().replace(/\s+$/g,"");
+        var descricao = $dialog.find("textarea").val().replace(/\s+$/g, "");
         ws_token().then(Login => {
           var data = {
             descricao: descricao,

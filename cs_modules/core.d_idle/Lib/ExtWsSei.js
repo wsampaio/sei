@@ -16,21 +16,20 @@ var seipp_api = {
   },
   marcador: {
     listar: "marcador_listar"
-  }
+  },
+  unidade_alterar: ""
 }
 
 /**
  * Api POST (Criar/Alterar/Excluir)
- * @param {*} apirest
+ * @param {seipp_api} apirest
  * @param {*} json_data
  */
 function ext_ws_post(apirest, json_data, opt_data = null, resp = null) {
   return new Promise((resolve, reject) => {
     if (__isInGroup(seipp_api, apirest)) {
       var ExecPost = null;
-      if (resp != null) {
-        ExecPost = Promise.resolve(resp);
-      } else if (__isInGroup(seipp_api.processo, apirest) && opt_data != null) {
+      if (__isInGroup(seipp_api.processo, apirest) && opt_data != null) {
         /* opt_data corresponde a resposta de consulta do processo = proc */
         ExecPost = Promise.resolve(opt_data).then(proc => {
           /** Pega o link para buscar os dados */
@@ -53,6 +52,10 @@ function ext_ws_post(apirest, json_data, opt_data = null, resp = null) {
         });
       } else if (__isInGroup(seipp_api.listar, apirest) && resp != null) {
         ExecPost = Promise.resolve(resp);
+      } else if (apirest == seipp_api.unidade_alterar) {
+        ExecPost = Promise.resolve(document.documentElement.outerHTML);
+      } else if (resp != null) {
+        ExecPost = Promise.resolve(resp);
       }
 
       if (ExecPost != null) {
@@ -67,6 +70,8 @@ function ext_ws_post(apirest, json_data, opt_data = null, resp = null) {
               return __Post_ProcessoEnviar(resp, json_data);
             case seipp_api.listar.processos:
               return __Post_ListarProcessos(resp, json_data);
+            case seipp_api.unidade_alterar:
+              return __Post_UnidadeAlterar(resp, json_data);
             default:
               return new Error(seipp_api_name + ": Api não implementada");
           }
@@ -76,7 +81,7 @@ function ext_ws_post(apirest, json_data, opt_data = null, resp = null) {
           post.data = postEncodeURI(post.data);
           return fetch(GetBaseUrl() + post.url, {
             body: post.data,
-            headers: { 'content-type': 'application/x-www-form-urlencoded' },
+            headers: { 'content-type': 'application/x-www-form-urlencoded', "Referer": post.url },
             method: 'POST'
           });
         }).then(function (response) {
@@ -275,7 +280,31 @@ function __Post_ProcessoEnviar(resp, json_data) {
   });
 }
 
-
+function __Post_UnidadeAlterar(resp, json_data) {
+  return new Promise((resolve, reject) => {
+    var excludes = [];
+    var $html = $($.parseHTML(resp));
+    var $form = $html.find("#frmInfraSelecionarUnidade");
+    var post = { url: "", data: {} };
+    post.url = $form.attr("action");
+    $form.find(":input").each(function () {
+      var name = $(this).attr("name");
+      var val = $(this).val();
+      val = Array.isArray(val) ? val[0] : val;
+      if (excludes.find(n => n == name) == undefined && val != undefined) {
+        switch (name) {
+          case "selInfraUnidades":
+            post.data[name] = isUndefined(json_data.idUnidade, false);
+            break;
+          default:
+            post.data[name] = val;
+            break;
+        }
+      }
+    });
+    resolve(post);
+  });
+}
 /****** Métodos que usam get *******/
 
 
