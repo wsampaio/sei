@@ -13,6 +13,8 @@ function ControleGerencial() {
     var $progressbar = null;
     var Marcadores = [];
     var GrupoAcompanhamentos = [];
+    var LoginWs = {};
+    var CgpAcoesPersonalizadas = [];
 
     /** Recuperar os dados dos processos pelo wssei */
     var dataprocessos = [];
@@ -43,8 +45,7 @@ function ControleGerencial() {
         /** Erro na autenticação: 2º requisição */
         return ws_autenticar();
       }
-    }).then(Login => {
-      /** Verifica a unidade atual do sei com o wssei e atualiza se necessário */
+    }).then(Login => { /** Verifica a unidade atual do sei com o wssei e atualiza se necessário */
       var unidade_atual = $("#selInfraUnidades > option[selected]").val();
       if (unidade_atual != Login.loginData.IdUnidadeAtual) {
         console.log("unidade_atual: " + unidade_atual, "wssei: " + Login.loginData.IdUnidadeAtual);
@@ -55,7 +56,8 @@ function ControleGerencial() {
       } else {
         return Login;
       }
-    }).then(Login => {
+    }).then(Login => { /** Carregar os dados necessários */
+      LoginWs = Login;
       return Promise.all([
         /** Pega a lista de marcadores */
         ext_ws_get(seipp_api.marcador.listar).then(function (marc) {
@@ -82,9 +84,14 @@ function ControleGerencial() {
             processo.$trrow = TabelaPreencherLista(processo);
           });
           return listaProcessos;
+        }),
+        /** Carrega as ações personalizadas */
+        browser.storage.local.get({ CgpAcoesPersonalizadas: [] }).then(stor => {
+          CgpAcoesPersonalizadas = stor.CgpAcoesPersonalizadas;
+          console.log("CgpAcoesPersonalizadas", CgpAcoesPersonalizadas);
         })
       ]);
-    }).then(dados => {
+    }).then(dados => { /** Carrega os dados extra dos processos */
       console.log(dados);
       return dados[2].reduce(function (sequence, processo) {
         return sequence.then(function () {
@@ -106,7 +113,7 @@ function ControleGerencial() {
           }
         });
       }, Promise.resolve());
-    }).then(() => {
+    }).then(() => { /** Finaliza o carregamento e ativa o tablesorter */
       //console.log(dados[2]);
       /** Adicioan a tabela na tela do sei */
       console.log("************ DADOS FINALIZADOS ***************");
@@ -116,7 +123,6 @@ function ControleGerencial() {
       //https://mottie.github.io/tablesorter/docs/example-empty-table.html
       $tabela.find("thead > tr > th").removeClass("sorter-false");
       $tabela.trigger("update");
-
     }).catch(erro => {
       console.error(erro);
       $progressbar.progressbar("destroy");
@@ -150,11 +156,15 @@ function ControleGerencial() {
       });
 
       /* Botão e tela de configuração */
+      var $cfg_colunas = $('<div id="columnSelector" class="columnSelector"/>');
+
+      var $cfg_ações = $();
+
       var $dialog = $("<div/>")
+        .appendTo("body")
         .attr("id", "cg_configuracao")
         .attr("title", "Configurações")
-        .append($('<div id="columnSelector" class="columnSelector"/>'))
-        .appendTo("body")
+        .append($cfg_colunas)
         .dialog({
           autoOpen: false, modal: true,
           buttons: {
@@ -180,23 +190,6 @@ function ControleGerencial() {
       $throw.append($("<th/>").text("Acompanhamento").attr("data-priority", "4").addClass("sorter-false columnSelector-false"));
       $throw.append($("<th/>").text("Ações").attr("data-priority", "5").addClass("columnNowrap"));
       $thead.append($throw);
-
-      // var txanotacao1 = "Anotação do processo";
-      // $("#divInfraAreaDados").append("<button>TESTE</button>").find("button").on("click", function () {
-      //   ext_ws_get(seipp_api.processo.consultar, null, "60").then(proc => {
-      //     var post_env = {}
-      //     post_env.manterAberto = false;
-      //     post_env.unidades = [{ id: "110000003", name: "TESTE_1_2" }];
-      //     return ext_ws_post(seipp_api.processo.enviar, post_env, proc).then(resp => {
-      //       var ua_env = {
-      //         idUnidade: "110000003"
-      //       };
-      //       return ext_ws_post(seipp_api.unidade_alterar, ua_env);
-      //     });
-      //   }).then(resp => {
-      //     console.log(resp);
-      //   })
-      // });
 
       /** Aplica o tablesorter */
       $("#divInfraAreaDados").append($comandos, $tabela);
@@ -352,6 +345,19 @@ function ControleGerencial() {
 
       $acoes.append($acao_acompanhamento, $acao_concluir);
       $trrow.append($acoes);
+
+      /** Ações personalizadas */
+      CgpAcoesPersonalizadas.forEach(acao => {
+        var $acao_personalizada = $("<div/>");
+        $acao_personalizada.append($("<img/>").attr("src", acao.imagem))
+          .attr("title", acao.nome).hide()
+          .on("click", function () {
+            ExecutarAcoes(acao.cmd_acoes, $trrow).then(r => {
+              console.log("Acao personalizada executada.");
+            }).catch(console.error);
+          });
+        $acoes.append($acao_personalizada);
+      });
 
       /** FIM */
       $tbody.append($trrow);
@@ -766,6 +772,149 @@ function ControleGerencial() {
           alert(err);
         });
       }
+    }
+
+    function ExecutarAcoes(cmd_acoes, $trrow) {
+      var MemCache = {};
+
+      function IniciarAcoes($trrow) {
+        return new Promise((resolve, reject) => {
+          var resp = {
+            processo: {
+              id: -1,
+              numDoc: "",
+              anotacao: null,
+              marcador: null
+            },
+            login: null
+          };
+          console.log("IniciarAcoes", $trrow);
+          resp.processo.id = parseInt($trrow.find("#tdprocesso > div[id^='proc']").attr("id").substr(4));
+          resp.processo.numDoc = $trrow.find("#tdprocesso > div[id^='proc'] > a").text();
+
+          var $anotacao = $trrow.find("#tdanotacao > div.anotacao:visible");
+          if ($anotacao.length > 0) {
+            resp.processo.anotacao = {};
+            resp.processo.anotacao.texto = $anotacao.text();
+            resp.processo.anotacao.prioridade = JSON.parse($anotacao.attr("prioridade"));
+          }
+
+          var $marcador = $trrow.find("#tdmarcador > div.marcador:visible");
+          if ($marcador.length > 0) {
+            resp.processo.marcador = {};
+            resp.processo.marcador.nome = $marcador.find("#img > img").attr("title");
+            resp.processo.marcador.cor = /\_(.*)\./.exec($marcador.find("img").attr("src"))[1];
+            resp.processo.marcador.descricao = $marcador.find("#text").text();
+          }
+
+          resp.login = LoginWs;
+          console.log("IniciarAcoes => OK");
+          resolve(resp);
+        });
+      }
+      function AnotacaoSalvar(resp, opt) {
+        return new Promise((resolve, reject) => {
+          MemCache.anotacao = resp.processo.anotacao;
+          console.log(resp.processo.anotacao);
+          console.log("SavarAnotacao => OK");
+          resolve(resp);
+        });
+      }
+      function ProcessoEnviar(resp, opt) {
+        return new Promise((resolve, reject) => {
+          var json_data = {
+            numeroProcesso: "",
+            unidadesDestino: "",
+            sinManterAbertoUnidade: "N",
+            sinRemoverAnotacao: "N",
+            sinReabrir: "S"
+          };
+          json_data.numeroProcesso = resp.processo.numDoc;
+          if (opt.unidade == undefined) {
+            reject("ProcessoEnviar => ERRO: unidade não informada.");
+          } else {
+            json_data.unidadesDestino = opt.unidade;
+            ws_post(wsapi.processo.enviar, json_data).then(r => {
+              $trrow.remove();
+              $tabela.trigger("update");
+              console.log("ProcessoEnviar => OK");
+              resolve(resp);
+            });
+          }
+        });
+      }
+      function UnidadeAlterar(resp, opt) {
+        return new Promise((resolve, reject) => {
+          /** FAZER */
+          var json_data = {
+            unidade: ""
+          };
+          if (opt.unidade == undefined) {
+            reject("UnidadeAlterar => ERRO: unidade não informada.");
+          } else {
+            json_data.unidade = opt.unidade;
+            ws_post(wsapi.usuario.alterar_unidade, json_data).then(login => {
+              resp.login = login;
+              console.log("UnidadeAlterar => OK");
+              resolve(resp);
+            });
+          }
+        });
+      }
+      function AnotacaoCadastrar(resp, opt) {
+        return new Promise((resolve, reject) => {
+          /** FAZER */
+          var json_data = {
+            descricao: "",
+            protocolo: resp.processo.id,
+            unidade: resp.login.loginData.IdUnidadeAtual,
+            usuario: resp.login.loginData.IdUsuario,
+            prioridade: "N"
+          };
+          opt.cache = isUndefined(opt.cache, false);
+          if (opt.texto == undefined && !opt.cache) {
+            reject("AnotacaoCadastrar => ERRO: texto não informado.");
+          } else {
+            if (opt.cache) {
+              json_data.descricao = MemCache.anotacao.texto;
+              json_data.prioridade = MemCache.anotacao.prioridade ? "S" : "N";
+            } else {
+              json_data.descricao = opt.texto;
+              json_data.prioridade = isUndefined(opt.prioridade, false) ? "S" : "N";
+            }
+            ws_post(wsapi.anotacao, json_data).then(r => {
+              console.log("AnotacaoCadastrar => OK", r);
+              resolve(resp);
+            });
+          }
+        });
+      }
+
+      return cmd_acoes.reduce((seq, acao) => {
+        var p = null;
+        switch (acao.cmd) {
+          case "AnotacaoSalvar":
+            p = AnotacaoSalvar;
+            break;
+          case "ProcessoEnviar":
+            p = ProcessoEnviar;
+            break;
+          case "UnidadeAlterar":
+            p = UnidadeAlterar;
+            break;
+          case "AnotacaoCadastrar":
+            p = AnotacaoCadastrar;
+            break;
+          default:
+            return Promise.reject("Comando não encontrado: " + acao.cmd);
+            break;
+        }
+        console.log(p);
+        return seq.then(resp => {
+          console.log(acao);
+          return p(resp, acao.opt);
+        });
+      }, IniciarAcoes($trrow));
     }
   };
 

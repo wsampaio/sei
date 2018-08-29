@@ -11,6 +11,10 @@ var seipp_api = {
     acompanhamento: "acompanhamento_cadastrar",
     enviar: "procedimento_enviar"
   },
+  procedimento: {
+    anotacao: "anotacao_registrar",
+    marcador: "andamento_marcador_gerenciar"
+  },
   listar: {
     processos: "procedimento_controlar",
   },
@@ -286,7 +290,7 @@ function __Post_UnidadeAlterar(resp, json_data) {
     var $html = $($.parseHTML(resp));
     var $form = $html.find("#frmInfraSelecionarUnidade");
     var post = { url: "", data: {} };
-    post.url = $form.attr("action").replace(GetBaseUrl(),"");
+    post.url = $form.attr("action").replace(GetBaseUrl(), "");
     $form.find(":input").each(function () {
       var name = $(this).attr("name");
       var val = $(this).val();
@@ -334,12 +338,17 @@ const __Ret_ListarProcessos = {
     visitado: false
   }
 }
+
+function __Get_ListarProcessos(resp) {
+  return __Get_ControleDeProcessos(resp);
+}
+
 /**
- * Pega a lista de processos.
+ * Pega a lista de processos, ações do processo da tela controle de processo.
  * @param {string} resp html de retorno do fetch.
  * @returns {__Ret_ProcessoListar[]}
  */
-function __Get_ListarProcessos(resp, paginar = true) {
+function __Get_ControleDeProcessos(resp, paginar = true, idProcesso = null) {
   return new Promise((resolve, reject) => {
     var $html = $($.parseHTML(resp));
     var confOrig = { tipoVisualizacao: "", meusProcessos: "", idMarcador: "" };
@@ -354,7 +363,7 @@ function __Get_ListarProcessos(resp, paginar = true) {
     if (confOrig.meusProcessos == "M" || confOrig.idMarcador != "" || confOrig.tipoVisualizacao == "R") {
       /** Fazer um post na página */
       var post_data = { tipoVisualizacao: "D", meusProcessos: "T", idMarcador: "" }
-      ext_ws_post(seipp_api.listar.processos, post_data, null, resp).then((resp) => __Get_ListarProcessos(resp)).then(ret => {
+      ext_ws_post(seipp_api.listar.processos, post_data, null, resp).then((resp) => __Get_ControleDeProcessos(resp, paginar, idProcesso)).then(ret => {
         /** Retornar filtros iniciais da tela */
         ext_ws_post(seipp_api.listar.processos, confOrig, null, resp).then(() => {
           console.log("__Get_ProcessoListar: Filtros originais redefinidos.");
@@ -414,6 +423,12 @@ function __Get_ListarProcessos(resp, paginar = true) {
         processos.push(p);
       });
 
+      if (idProcesso != null) {
+        if (processos.find(e => e.id == idProcesso) != undefined) {
+          paginar = false;
+        }
+      }
+
       /* Se tiver paginação execulta a busca em todas as paginações */
       if (paginar && $html.find("#selInfraPaginacaoSuperior > option").length > 0) {
         var paginaAtual = $html.find("#selInfraPaginacaoSuperior > option[selected]").val();
@@ -424,15 +439,33 @@ function __Get_ListarProcessos(resp, paginar = true) {
         $PaginacaoOption.each((i, opt) => {
           if (i != paginaAtual) {
             arr.push(ext_ws_post(seipp_api.listar.processos, { paginaAtual: i.toString() }, null, resp).then(html => {
-              return __Get_ListarProcessos(html, false);
+              return __Get_ControleDeProcessos(html, false, idProcesso);
             }));
           }
         });
         Promise.all(arr).then(resps => {
-          resolve(resps.reduce((a, c) => a.concat(c), processos));
+          if (idProcesso != null) {
+            var proc = resps.find(e => e != null);
+            if (proc != undefined) {
+              resolve(resp)
+            } else {
+              resolve(null);
+            }
+          } else {
+            resolve(resps.reduce((a, c) => a.concat(c), processos));
+          }
         });
       } else {
-        resolve(processos);
+        if (idProcesso != null) {
+          /** Busca processo */
+          if (processos.find(e => e.id == idProcesso) != undefined) {
+            resolve(resp);
+          } else {
+            resolve(null);
+          }
+        } else {
+          resolve(processos);
+        }
       }
     }
   });
