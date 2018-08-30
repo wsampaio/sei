@@ -78,7 +78,8 @@ function ControleGerencial() {
           if (listaProcessos.length == 0) {
             $progressbar.progressbar("value", 100);
           } else {
-            progressbar_val = 100.0 / listaProcessos.reduce((a, b) => b.status.visualizado ? a + 1 : a, 0);
+            progressbar_val = 100.0 / (listaProcessos.reduce((a, b) => b.status.visualizado ? a + 1 : a, 0) + 1);
+            $progressbar.progressbar("value", progressbar_val);
           }
           listaProcessos.forEach(processo => {
             processo.$trrow = TabelaPreencherLista(processo);
@@ -197,8 +198,13 @@ function ControleGerencial() {
                   console.log("Salvar > CgpAcoesPersonalizadas: ", CgpAcoesPersonalizadas);
                   /** Incluir/excluir/altear das linhas da tabela */
                   $tabela.find("tbody > tr").each(function (i, e) {
+                    var visualizado = false
                     var $tdacoes = $(e).find("#tdacoes");
-                    AtualizarAcaoPersonalizada($tdacoes);
+
+                    visualizado = $(e).find("#tdprocesso > div[id^='proc'] > a").hasClass("processoVisualizado");
+                    if (visualizado) {
+                      AtualizarAcaoPersonalizada($tdacoes);
+                    }
                   });
                   $dialog.dialog("close");
                 });
