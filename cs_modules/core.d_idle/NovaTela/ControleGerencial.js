@@ -156,23 +156,79 @@ function ControleGerencial() {
       });
 
       /* Botão e tela de configuração */
-      var $cfg_colunas = $('<div id="columnSelector" class="columnSelector"/>');
+      var $cfg_colunas = $('<fieldset/>').append(
+        $("<legend/>").text("Editar colunas:"),
+        $('<div id="columnSelector" class="columnSelector"/>')
+      );
 
-      var $cfg_ações = $();
+      var $cfg_ações = $("<fieldset/>")
+        .append($("<legend/>").text("Editar ações Personalizadas:"))
+        .append(
+          $('<label for="name"/>').text('Nome'),
+          $('<input id ="name" name="name" type="text" spellcheck="true"/>'),
+          $('<label for="image"/>').text('Link da imagem do ícone'),
+          $('<input id="image" name="image" type="text"/>'),
+          $('<label for="cmd"/>').text('Comandos (json)'),
+          $('<textarea id="cmd" name="cmd" spellcheck="false"/>')
+        );
 
       var $dialog = $("<div/>")
         .appendTo("body")
         .attr("id", "cg_configuracao")
         .attr("title", "Configurações")
-        .append($cfg_colunas)
+        .append($cfg_colunas, $cfg_ações)
         .dialog({
-          autoOpen: false, modal: true,
+          autoOpen: false, modal: true, width: 570,
           buttons: {
-            Fechar: function () {
-              $dialog.dialog("close");
+            Salvar: function () {
+              var acao = {}
+              acao.nome = $("#cg_configuracao #name").val();
+              acao.imagem = $("#cg_configuracao #image").val();
+              acao.cmd_acoes = [];
+              try {
+                acao.cmd_acoes.push(JSON.parse("[" + $("#cg_configuracao #cmd").val() + "]"));
+                if (acao.nome == "") {
+                  CgpAcoesPersonalizadas = [];
+                } else {
+                  CgpAcoesPersonalizadas[0] = acao;
+                }
+
+                browser.storage.local.set({ CgpAcoesPersonalizadas }).then(() => {
+                  console.log("Salvar > CgpAcoesPersonalizadas: ", CgpAcoesPersonalizadas);
+                  /** Incluir/excluir/altear das linhas da tabela */
+                  $tabela.find("tbody > tr").each(function (i, e) {
+                    var $tdacoes = $(e).find("#tdacoes");
+                    AtualizarAcaoPersonalizada($tdacoes);
+                  });
+                  $dialog.dialog("close");
+                });
+              } catch (error) {
+                alert(error);
+              }
+            },
+            Fechar: function () { $dialog.dialog("close"); }
+          },
+          open: function () {
+            console.log(CgpAcoesPersonalizadas);
+            var acao = {};
+            if (CgpAcoesPersonalizadas[0] != undefined) {
+              acao = CgpAcoesPersonalizadas[0];
+              $("#cg_configuracao #name").val(acao.nome);
+              $("#cg_configuracao #image").val(acao.imagem);
+              try {
+                $("#cg_configuracao #cmd").val(JSON.stringify(acao.cmd_acoes).replace("}},", "}},\n").replace(/\[|\]/g, ""));
+              } catch (error) {
+                alert("Erro ao carregar os comandos...")
+              }
             }
           },
+          close: function () {
+            $("#cg_configuracao #name").val("");
+            $("#cg_configuracao #image").val("");
+            $("#cg_configuracao #cmd").val("");
+          }
         });
+
       var $bt_configuracao = $("<button>").button({
         icon: "ui-icon-gear"
       }).on("click", () => $dialog.dialog("open"));
@@ -329,41 +385,27 @@ function ControleGerencial() {
 
       /** Açoes */
       var $acoes = $("<td/>").attr('id', 'tdacoes');
-      var $acao_acompanhamento = $("<div/>");
-      var $acao_concluir = $("<div/>");
-
-      $acao_acompanhamento.append($("<img/>").attr("src", "imagens/sei_acompanhamento_especial_pequeno.png"))
-        .attr("idproc", processo.id)
-        .attr("title", "Adicionar ou alterar Acompanhamento especial")
-        .on("click", click_acao_acompanhamento)
-        .hide();
-      $acao_concluir.append($("<img/>").attr("src", "imagens/sei_concluir_processo.gif"))
-        .attr("idproc", processo.numDoc)
-        .attr("title", "Concluir processo nesta unidade")
-        .on("click", click_acao_concluir)
-        .hide();
-
-      $acoes.append($acao_acompanhamento, $acao_concluir);
       $trrow.append($acoes);
-
-      /** Ações personalizadas */
-      CgpAcoesPersonalizadas.forEach(acao => {
-        var $acao_personalizada = $("<div/>");
-        $acao_personalizada.append($("<img/>").attr("src", acao.imagem))
-          .attr("title", acao.nome).hide()
-          .on("click", function () {
-            ExecutarAcoes(acao.cmd_acoes, $trrow).then(r => {
-              console.log("Acao personalizada executada.");
-            }).catch(console.error);
-          });
-        $acoes.append($acao_personalizada);
-      });
 
       /** FIM */
       $tbody.append($trrow);
       /* Atualiza a tabela */
       $tabela.trigger("update");
       return $trrow;
+    }
+    function AtualizarAcaoPersonalizada($tdacoes) {
+      $tdacoes.find("div[tipo='personalizada']").remove();
+      CgpAcoesPersonalizadas.forEach(acao => {
+        var $acao_personalizada = $("<div/>").attr("tipo", "personalizada");
+        $acao_personalizada.append($("<img/>").attr("src", acao.imagem == "" ? browser.extension.getURL("icons/check.png") : acao.imagem))
+          .attr("title", acao.nome)
+          .on("click", function () {
+            ExecutarAcoes(acao.cmd_acoes, $trrow).then(r => {
+              console.log("Acao personalizada executada.");
+            }).catch(console.error);
+          });
+        $tdacoes.append($acao_personalizada);
+      });
     }
     /**
      *
@@ -450,7 +492,24 @@ function ControleGerencial() {
       }
 
       /** Açoes */
-      $trrow.find("#tdacoes > div").show();
+      var $acoes = $trrow.find('#tdacoes');
+      var $acao_acompanhamento = $("<div/>");
+      var $acao_concluir = $("<div/>");
+
+      $acao_acompanhamento.append($("<img/>").attr("src", "imagens/sei_acompanhamento_especial_pequeno.png"))
+        .attr("idproc", DadosExtras.processo.id)
+        .attr("title", "Adicionar ou alterar Acompanhamento especial")
+        .on("click", click_acao_acompanhamento);
+
+      $acao_concluir.append($("<img/>").attr("src", "imagens/sei_concluir_processo.gif"))
+        .attr("idproc", DadosExtras.processo.numDoc)
+        .attr("title", "Concluir processo nesta unidade")
+        .on("click", click_acao_concluir);
+
+      $acoes.append($acao_acompanhamento, $acao_concluir);
+
+      /** Ações personalizadas */
+      AtualizarAcaoPersonalizada($acoes);
 
       /* Atualiza a tabela */
       $trrow.find("#tdprocesso #aguarde").hide()

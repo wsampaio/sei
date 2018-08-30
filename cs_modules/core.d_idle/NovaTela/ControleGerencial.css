@@ -11,6 +11,19 @@
   display: grid;
 }
 
+/** cg_configuracao */
+#cg_configuracao {
+  display: flex;
+}
+#cg_configuracao input {
+  width: 100%;
+}
+#cg_configuracao textarea {
+  width: 100%;
+  height: 150px;
+  resize: vertical;
+}
+
 /** Progressbar **/
 #progressbar {
   width: 100%;
@@ -133,6 +146,6 @@
 #TabelaGR > tbody > tr > td:nth-child(6) > div {
   display: table;
 }
-#TabelaGR > tbody > tr > td:nth-child(6) img[src="imagens/sei_concluir_processo.gif"] {
+#TabelaGR > tbody > tr > #tdacoes img {
   width: 20px;
 }
