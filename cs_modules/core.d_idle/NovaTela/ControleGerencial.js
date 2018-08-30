@@ -100,6 +100,7 @@ function ControleGerencial() {
             return CarregarDadosProcesso(processo);
           } else {
             processo.$trrow.find("#tdprocesso > div:first > a").on("click", function () {
+              $(this).off("click");
               $(this).removeClass("processoNaoVisualizado").addClass("processoVisualizado processoVisitado");
               CarregarDadosProcesso(processo).then(DadosExtras => {
                 return TabelaPreencherDados(processo.$trrow, DadosExtras);
@@ -187,7 +188,7 @@ function ControleGerencial() {
               acao.imagem = $("#cg_configuracao #image").val();
               acao.cmd_acoes = [];
               try {
-                acao.cmd_acoes.push(JSON.parse("[" + $("#cg_configuracao #cmd").val() + "]"));
+                acao.cmd_acoes = JSON.parse("[" + $("#cg_configuracao #cmd").val() + "]");
                 if (acao.nome == "") {
                   CgpAcoesPersonalizadas = [];
                 } else {
@@ -406,7 +407,7 @@ function ControleGerencial() {
         $acao_personalizada.append($("<img/>").attr("src", acao.imagem == "" ? browser.extension.getURL("icons/check.png") : acao.imagem))
           .attr("title", acao.nome)
           .on("click", function () {
-            ExecutarAcoes(acao.cmd_acoes, $trrow).then(r => {
+            ExecutarAcoes(acao.cmd_acoes, $tdacoes.parent()).then(r => {
               console.log("Acao personalizada executada.");
             }).catch(console.error);
           });
@@ -971,7 +972,9 @@ function ControleGerencial() {
             p = AnotacaoCadastrar;
             break;
           default:
-            return Promise.reject("Comando não encontrado: " + acao.cmd);
+            console.log(cmd_acoes);
+            console.log(acao);
+            return Promise.reject("ExecutarAcoes: Erro -> Comando não encontrado: " + acao.cmd);
             break;
         }
         console.log(p);
