@@ -247,7 +247,7 @@ function ControleGerencial() {
       /** Cabeçalho da tabela */
       var $throw = $("<tr/>");
       $throw.append($("<th/>").text("Processo").attr("data-priority", "critical").addClass("sorter-false"));
-      $throw.append($("<th/>").text("tipo").attr("data-priority", "1").addClass("sorter-false columnSelector-false"));
+      $throw.append($("<th/>").text("Tipo").attr("data-priority", "1").addClass("sorter-false columnSelector-false"));
       $throw.append($("<th/>").text("Anotação").attr("data-priority", "2").addClass("sorter-false"));
       $throw.append($("<th/>").text("Marcador").attr("data-priority", "3").addClass("sorter-false"));
       $throw.append($("<th/>").text("Acompanhamento").attr("data-priority", "4").addClass("sorter-false columnSelector-false"));
@@ -842,6 +842,9 @@ function ControleGerencial() {
 
     function ExecutarAcoes(cmd_acoes, $trrow) {
       var MemCache = {};
+      var $dialog = $("<div/>").attr({ id: 'DialogExecutarAcoes', title: 'Executando ações...' }).appendTo("body");
+      var fimLog = false;
+      var unidadeAtual = "";
 
       function IniciarAcoes($trrow) {
         return new Promise((resolve, reject) => {
@@ -854,7 +857,6 @@ function ControleGerencial() {
             },
             login: null
           };
-          console.log("IniciarAcoes", $trrow);
           resp.processo.id = parseInt($trrow.find("#tdprocesso > div[id^='proc']").attr("id").substr(4));
           resp.processo.numDoc = $trrow.find("#tdprocesso > div[id^='proc'] > a").text();
 
@@ -874,15 +876,17 @@ function ControleGerencial() {
           }
 
           resp.login = LoginWs;
-          console.log("IniciarAcoes => OK");
+
+          $dialog.dialog("open");
+          MessageLog("Processo: " + resp.processo.numDoc + "\n");
+          MessageLog("IniciarAcoes => ...OK\n");
           resolve(resp);
         });
       }
       function AnotacaoSalvar(resp, opt) {
         return new Promise((resolve, reject) => {
           MemCache.anotacao = resp.processo.anotacao;
-          console.log(resp.processo.anotacao);
-          console.log("SavarAnotacao => OK");
+          MessageLog("SavarAnotacao => OK\n");
           resolve(resp);
         });
       }
@@ -895,15 +899,16 @@ function ControleGerencial() {
             sinRemoverAnotacao: "N",
             sinReabrir: "S"
           };
+          MessageLog("ProcessoEnviar => ...");
           json_data.numeroProcesso = resp.processo.numDoc;
           if (opt.unidade == undefined) {
-            reject("ProcessoEnviar => ERRO: unidade não informada.");
+            reject("ERRO: unidade não informada.");
           } else {
             json_data.unidadesDestino = opt.unidade;
             ws_post(wsapi.processo.enviar, json_data).then(r => {
               $trrow.remove();
               $tabela.trigger("update");
-              console.log("ProcessoEnviar => OK");
+              MessageLog("OK\n");
               resolve(resp);
             });
           }
@@ -911,17 +916,18 @@ function ControleGerencial() {
       }
       function UnidadeAlterar(resp, opt) {
         return new Promise((resolve, reject) => {
-          /** FAZER */
           var json_data = {
             unidade: ""
           };
+          MessageLog("UnidadeAlterar => ...");
           if (opt.unidade == undefined) {
-            reject("UnidadeAlterar => ERRO: unidade não informada.");
+            reject("ERRO: unidade não informada.");
           } else {
             json_data.unidade = opt.unidade;
             ws_post(wsapi.usuario.alterar_unidade, json_data).then(login => {
               resp.login = login;
-              console.log("UnidadeAlterar => OK");
+              unidadeAtual = opt.unidade;
+              MessageLog("OK\n");
               resolve(resp);
             });
           }
@@ -929,7 +935,6 @@ function ControleGerencial() {
       }
       function AnotacaoCadastrar(resp, opt) {
         return new Promise((resolve, reject) => {
-          /** FAZER */
           var json_data = {
             descricao: "",
             protocolo: resp.processo.id,
@@ -937,9 +942,10 @@ function ControleGerencial() {
             usuario: resp.login.loginData.IdUsuario,
             prioridade: "N"
           };
+          MessageLog("AnotacaoCadastrar => ...");
           opt.cache = isUndefined(opt.cache, false);
           if (opt.texto == undefined && !opt.cache) {
-            reject("AnotacaoCadastrar => ERRO: texto não informado.");
+            reject("ERRO: texto não informado.");
           } else {
             if (opt.cache) {
               json_data.descricao = MemCache.anotacao.texto;
@@ -949,13 +955,34 @@ function ControleGerencial() {
               json_data.prioridade = isUndefined(opt.prioridade, false) ? "S" : "N";
             }
             ws_post(wsapi.anotacao, json_data).then(r => {
-              console.log("AnotacaoCadastrar => OK", r);
+              MessageLog("OK\n");
               resolve(resp);
             });
           }
         });
       }
 
+      function MessageLog(msg) {
+        var $log = $dialog.find("#LogExecutarAcoes");
+        $log.val($log.val() + msg);
+        console.log(msg);
+      }
+      $dialog.append($("<form>")).append(
+        $("<textarea id='LogExecutarAcoes'/>").attr({
+          id: 'LogExecutarAcoes',
+          rows: '20',
+          cols: '50',
+          readonly: true
+        }).css({ backgroundColor: "lightgray", fontSize: "12px", width: "100%", heigth: "100%", resize: "none" })
+      );
+      $dialog.dialog({
+        autoOpen: true, modal: true, width: 'auto',
+        beforeClose: function () {
+          return fimLog;
+        }
+      });
+      console.log($dialog.html());
+      $("#DialogExecutarAcoes").parent().find(".ui-dialog-title").css({ fontSize: "12px", fontWeight: "bold" });
       return cmd_acoes.reduce((seq, acao) => {
         var p = null;
         switch (acao.cmd) {
@@ -982,7 +1009,29 @@ function ControleGerencial() {
           console.log(acao);
           return p(resp, acao.opt);
         });
-      }, IniciarAcoes($trrow));
+      }, IniciarAcoes($trrow)).then(r => {
+        return Promise.resolve(r).then(resp => {
+          if (unidadeAtual != "") {
+            var unid = $("#selInfraUnidades > option[selected]").val();
+            if (unidadeAtual != unid) {
+              var opt = { unidade: unid };
+              MessageLog("!!!Retornando à unidade atual...");
+              return UnidadeAlterar(resp, opt);
+            } else {
+              return Promise.resolve(resp)
+            }
+          }
+        }).then(r => {
+          fimLog = true;
+          MessageLog("Concluido com sucesso.");
+          $("#DialogExecutarAcoes").parent().find(".ui-dialog-titlebar").css({ backgroundColor: "green" });
+        });
+      }).catch(err => {
+        fimLog = true;
+        MessageLog(err.message);
+        $("#DialogExecutarAcoes").parent().find(".ui-dialog-titlebar").css({ backgroundColor: "red" });
+        return Promise.reject(err);
+      });
     }
   };
 
