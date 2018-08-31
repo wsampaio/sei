@@ -9,13 +9,14 @@
 /** */
 #columnSelector {
   display: grid;
+  width: 130px;
 }
 
 /** cg_configuracao */
 #cg_configuracao {
   display: flex;
 }
-#cg_configuracao input {
+#cg_configuracao input[type='text'] {
   width: 100%;
 }
 #cg_configuracao textarea {
