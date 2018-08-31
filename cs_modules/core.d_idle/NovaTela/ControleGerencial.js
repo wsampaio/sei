@@ -120,6 +120,7 @@ function ControleGerencial() {
       /** Adicioan a tabela na tela do sei */
       console.log("************ DADOS FINALIZADOS ***************");
       $progressbar.hide();
+      $("#cg_comandos > button").show();
 
       /** Atualiza a tabela */
       //https://mottie.github.io/tablesorter/docs/example-empty-table.html
@@ -236,7 +237,7 @@ function ControleGerencial() {
           }
         });
 
-      var $bt_configuracao = $("<button>").button({
+      var $bt_configuracao = $("<button>").hide().button({
         icon: "ui-icon-gear"
       }).on("click", () => $dialog.dialog("open"));
       $comandos.append($bt_configuracao, $progressbar);
