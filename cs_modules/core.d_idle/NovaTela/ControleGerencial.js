@@ -15,6 +15,77 @@ function ControleGerencial() {
     var GrupoAcompanhamentos = [];
     var LoginWs = {};
     var CgpAcoesPersonalizadas = [];
+    var graficos = {
+      marcador: {
+        config: {
+          type: 'pie',
+          data: {
+            datasets: [{ data: [10] }], labels: ["_"]
+          },
+          options: {
+            responsive: true,
+            legend: {
+              display: true, position: "top", labels: { boxWidth: 10 }
+            }
+          }
+        },
+        chart: null
+      },
+      tipoProcesso: {
+        config: {
+          type: 'bar',
+          data: {
+            labels: ['Tipo ...', 'Tipo ...', 'Tipo ...', 'Tipo ...', 'Tipo ...'],
+            datasets: [{ data: [1, 5, 10, 5, 10] }]
+          },
+          options: {
+            scales: {
+              yAxes: [{ ticks: { min: 0 } }],
+              xAxes: [{ display: true, ticks: { display: false } }]
+            },
+            responsive: true,
+            legend: { display: false }/*,
+            onClick: function (e) {
+              var activePoints = myChart.getElementsAtEvent(e)
+              var selectedIndex = activePoints[0]._index
+              alert(this.data.datasets[0].data[selectedIndex] + ' ' + this.data.labels[selectedIndex])
+            }*/
+          },
+          plugins: [{
+            afterDatasetsDraw: function (chart) {
+              var ctx1 = chart.ctx;
+              console.log(chart)
+              chart.data.datasets.forEach(function (dataset, i) {
+                var meta = chart.getDatasetMeta(i);
+                if (!meta.hidden) {
+                  meta.data.forEach(function (element, index) {
+                    // Draw the text in black, with the specified font
+                    ctx1.fillStyle = 'rgb(0, 0, 0)';
+
+                    var fontSize = 16;
+                    var fontStyle = 'normal';
+                    var fontFamily = 'Helvetica Neue';
+                    ctx1.font = Chart.helpers.fontString(fontSize, fontStyle, fontFamily);
+
+                    // Just naively convert to string for now
+                    var dataString = dataset.data[index].toString();
+
+                    // Make sure alignment settings are correct
+                    ctx1.textAlign = 'center';
+                    ctx1.textBaseline = 'middle';
+
+                    var padding = 5;
+                    var position = element.tooltipPosition();
+                    ctx1.fillText(dataString, position.x, position.y - (fontSize / 2) - padding);
+                  });
+                }
+              });
+            }
+          }]
+        },
+        chart: null
+      }
+    }
 
     /** Recuperar os dados dos processos pelo wssei */
     var dataprocessos = [];
@@ -94,6 +165,8 @@ function ControleGerencial() {
       ]);
     }).then(dados => { /** Carrega os dados extra dos processos */
       console.log(dados);
+      /** Atualiza os graficos */
+      AtualizarGraficos();
       return dados[2].reduce(function (sequence, processo) {
         return sequence.then(function () {
           if (processo.status.visualizado) {
@@ -136,6 +209,118 @@ function ControleGerencial() {
         $("#divInfraAreaDados").append(erro);
       }
     });
+
+    function AtualizarGraficos() {
+      var dt = { marcador: [], tipo: [] }
+
+      $tabela.find("tbody > tr").each((i, row) => {
+        var $marc = $(row).find("#tdmarcador > div.marcador:visible > #img > img");
+        if ($marc.length > 0) {
+          var cor = $marc.attr("src");
+          var nome = $marc.parent().find("label").text();
+          dt.marcador.push({ nome: nome, cor: cor })
+        } else {
+          dt.marcador.push({ nome: "Sem marcador", cor: "gray" })
+        }
+
+        dt.tipo.push($(row).find("#tdtipo > div").text());
+      });
+
+      /** Processa os dados de marcador */
+      dt.marcador = dt.marcador.reduce((acc, curr) => {
+        var a = acc.find((e, i) => {
+          var teste = e.nome == curr.nome
+          if (teste) {
+            e.qtd++
+          }
+          return teste
+        });
+        if (a == undefined) {
+          acc.push({
+            nome: curr.nome,
+            cor: curr.cor,
+            qtd: 1
+          });
+        }
+        return acc;
+      }, [])
+      if (dt.marcador.length > 0) {
+        graficos.marcador.config.data.datasets = [{ data: [], backgroundColor: [] }]
+        graficos.marcador.config.data.labels = []
+        dt.marcador.forEach(e => {
+          graficos.marcador.config.data.datasets[0].data.push(e.qtd)
+          graficos.marcador.config.data.labels.push(e.nome)
+          switch (e.cor) {
+            case "imagens/marcador_preto.png":
+              graficos.marcador.config.data.datasets[0].backgroundColor.push("black");
+              break;
+            case "imagens/marcador_branco.png":
+              graficos.marcador.config.data.datasets[0].backgroundColor.push("white");
+              break;
+            case "imagens/marcador_cinza.png":
+              graficos.marcador.config.data.datasets[0].backgroundColor.push("lightgray");
+              break;
+            case "imagens/marcador_vermelho.png":
+              graficos.marcador.config.data.datasets[0].backgroundColor.push("red");
+              break;
+            case "imagens/marcador_amarelo.png":
+              graficos.marcador.config.data.datasets[0].backgroundColor.push("yellow");
+              break;
+            case "imagens/marcador_verde.png":
+              graficos.marcador.config.data.datasets[0].backgroundColor.push("#66ff33");
+              break;
+            case "imagens/marcador_azul.png":
+              graficos.marcador.config.data.datasets[0].backgroundColor.push("#3399ff");
+              break;
+            case "imagens/marcador_rosa.png":
+              graficos.marcador.config.data.datasets[0].backgroundColor.push("Fuchsia");
+              break;
+            case "imagens/marcador_roxo.png":
+              graficos.marcador.config.data.datasets[0].backgroundColor.push("purple");
+              break;
+            case "imagens/marcador_ciano.png":
+              graficos.marcador.config.data.datasets[0].backgroundColor.push("cyan");
+              break;
+            case "gray":
+              graficos.marcador.config.data.datasets[0].backgroundColor.push("gray");
+              break;
+            default:
+              alert("Erro ao atualizar o gráfico, cor não encontrada: " + e.cor)
+              break;
+          }
+        });
+      }
+
+      /** Processa os dados de tipo de processo */
+      dt.tipo = dt.tipo.reduce((acc, curr) => {
+        var a = acc.find((e, i) => {
+          if (e.nome == curr) {
+            e.qtd++;
+            return true;
+          } else {
+            return false;
+          }
+        });
+        if (a == undefined) {
+          acc.push({
+            nome: curr,
+            qtd: 1
+          })
+        }
+        return acc;
+      }, [])
+      if (dt.tipo.length > 0) {
+        graficos.tipoProcesso.config.data.datasets = [{ data: [], backgroundColor: "blue" }]
+        graficos.tipoProcesso.config.data.labels = []
+        dt.tipo.forEach(e => {
+          graficos.tipoProcesso.config.data.datasets[0].data.push(e.qtd)
+          graficos.tipoProcesso.config.data.labels.push(e.nome)
+        });
+      }
+
+      graficos.marcador.chart.update();
+      graficos.tipoProcesso.chart.update();
+    }
 
     /**  */
     function TabelaCriar() {
@@ -255,8 +440,11 @@ function ControleGerencial() {
       $throw.append($("<th/>").text("Ações").attr("data-priority", "5").addClass("columnNowrap"));
       $thead.append($throw);
 
+      /** Cria a area de graficos */
+      var $graficos = $('<div id="divGraficos"><div class="divGrafBox"><p class="titleCenter"><b>Total ...</b></p><canvas id="chartMarcador"></canvas></div><div class="divGrafBox"><p class="titleCenter"><b>Processos por Tipo</b></p><canvas id="chartTipoProcesso"></canvas></div><div class="divGrafBox"><div class="toolbar"><button>Blocos de Assinaturas disponíveis</button><button>Blocos de reuniões disponíveis</button><button>Blocos internos disponíveis</button><button>Relatório de retorno programado</button></div></div></div>"');
+
       /** Aplica o tablesorter */
-      $("#divInfraAreaDados").append($comandos, $tabela);
+      $("#divInfraAreaDados").append($graficos, $comandos, $tabela);
       $tabela.tablesorter({
         theme: 'blue',
         headers: {
@@ -289,6 +477,10 @@ function ControleGerencial() {
           }
         }
       });
+
+      /** Ativa os graficos */
+      graficos.marcador.chart = new Chart(document.getElementById('chartMarcador').getContext('2d'), graficos.marcador.config)
+      graficos.tipoProcesso.chart = new Chart(document.getElementById('chartTipoProcesso').getContext('2d'), graficos.tipoProcesso.config)
     }
 
     function TabelaPreencherLista(processo) {
@@ -320,7 +512,7 @@ function ControleGerencial() {
       }
 
       /** (HIDE) Tipo de processo */
-      $trrow.append($("<td/>").append($("<div/>").text(processo.tipo)));
+      $trrow.append($("<td/>").attr("id", "tdtipo").append($("<div/>").text(processo.tipo)));
 
       /** Anotação */
       var $anotacao = $("<div/>").addClass("anotacao").attr("idproc", processo.id);

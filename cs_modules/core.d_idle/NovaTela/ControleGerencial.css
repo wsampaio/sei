@@ -150,3 +150,25 @@
 #TabelaGR > tbody > tr > #tdacoes img {
   width: 20px;
 }
+
+/** Graficos **/
+#divGraficos {
+  display: flex;
+}
+
+.divGrafBox {
+  margin: 3px;
+  border:1px solid;
+  width: 33%;
+}
+
+.titleCenter {
+  text-align:center;
+}
+.divGrafBox .toolbar {
+  padding: 10px;
+}
+.divGrafBox .toolbar button {
+  margin-bottom: 10px;
+  width: 100%;
+}
