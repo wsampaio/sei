@@ -52,12 +52,7 @@ function ControleGerencial() {
             title: {
               display: true,
               text: "Processos por tipo"
-            }/*,
-            onClick: function (e) {
-              var activePoints = myChart.getElementsAtEvent(e)
-              var selectedIndex = activePoints[0]._index
-              alert(this.data.datasets[0].data[selectedIndex] + ' ' + this.data.labels[selectedIndex])
-            }*/
+            }
           },
           plugins: [{
             afterDatasetsDraw: function (chart) {
@@ -348,8 +343,38 @@ function ControleGerencial() {
           graficos.tipoProcesso.config.data.datasets[0].data.push(e.qtd)
           graficos.tipoProcesso.config.data.labels.push(e.nome)
         });
+
+        graficos.tipoProcesso.config.options.onClick = function (e) {
+          var activePoints = this.getElementsAtEvent(e)
+          if (activePoints.length > 0) {
+            var selectedIndex = activePoints[0]._index
+            var data = this.data.datasets[0]
+            var Filtar = typeof data.backgroundColor == 'string' ? true : data.backgroundColor[selectedIndex] != "blue";
+            var filters = $.tablesorter.getFilters($tabela);
+
+            if (Filtar) {
+              data.backgroundColor = []
+              data.backgroundColor[selectedIndex] = "blue"
+
+              /** Filtra a tabela */
+              filters[1] = this.data.labels[selectedIndex];
+            } else {
+              data.backgroundColor = 'blue'
+              /** remover filtro */
+              filters[1] = "";
+            }
+            console.log(filters)
+            if (filters.reduce((p, c) => c == "" && p ? true : false, true)) {
+              $tabela.trigger('filterReset');
+            } else {
+              $.tablesorter.setFilters($tabela, filters);
+            }
+            this.update()
+          }
+        }
       }
 
+      /** Atualiza os gráficos */
       graficos.marcador.chart.update();
       graficos.tipoProcesso.chart.update();
     }
@@ -503,8 +528,7 @@ function ControleGerencial() {
           },
           3: function (node, table, cellIndex) {
             var texto = $(node).find("#img > label").text();
-            texto = texto == undefined ? 0 : texto;
-            console.log(texto)
+            texto = texto == "" ? "Sem marcador" : texto;
             return texto;
           }
         }
