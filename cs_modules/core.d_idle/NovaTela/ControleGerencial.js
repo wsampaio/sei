@@ -205,7 +205,7 @@ function ControleGerencial() {
       //https://mottie.github.io/tablesorter/docs/example-empty-table.html
       $tabela.find("thead > tr > th").removeClass("sorter-false");
       $tabela.trigger("update");
-      $tabela.tablesorter().bind('updateComplete', function(e, table) {
+      $tabela.tablesorter().bind('updateComplete', function (e, table) {
         AtualizarGraficos();
       });
     }).catch(erro => {
@@ -299,6 +299,28 @@ function ControleGerencial() {
               break;
           }
         });
+      }
+      graficos.marcador.config.options.legend.onClick = function (e, legendItem) {
+        /* http://www.chartjs.org/docs/latest/configuration/legend.html#custom-on-click-actions */
+        console.log(legendItem, this);
+
+        var meta = this.chart.getDatasetMeta(0);
+
+        meta.data[legendItem.index].hidden = !meta.data[legendItem.index].hidden
+        this.chart.update();
+
+        /** Filtra a tabela */
+        var filters = $.tablesorter.getFilters($tabela);
+        var param = ""
+        meta.data.forEach(e => {
+          if (!e.hidden) {
+            param = param + (param == "" ? "" : "|") + e._view.label + "="
+          }
+        });
+
+        filters[3] = param == "" ? "null" : param
+        console.log(param, filters)
+        $.tablesorter.setFilters($tabela, filters);
       }
 
       /** Processa os dados de tipo de processo */
@@ -459,7 +481,7 @@ function ControleGerencial() {
         headers: {
           5: { sorter: false, filter: false }
         },
-        widgets: ["zebra", "columnSelector", "stickyHeaders"],
+        widgets: ["zebra", "columnSelector", "stickyHeaders", "filter"],
         widgetOptions: {
           // target the column selector markup
           columnSelector_container: $('#columnSelector'),
@@ -480,8 +502,9 @@ function ControleGerencial() {
             return texto;
           },
           3: function (node, table, cellIndex) {
-            var texto = $(node).find("img").attr('src');
+            var texto = $(node).find("#img > label").text();
             texto = texto == undefined ? 0 : texto;
+            console.log(texto)
             return texto;
           }
         }
