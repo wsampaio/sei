@@ -26,6 +26,10 @@ function ControleGerencial() {
             responsive: true,
             legend: {
               display: true, position: "top", labels: { boxWidth: 10 }
+            },
+            title: {
+              display: true,
+              text: "Total de processos: ..."
             }
           }
         },
@@ -44,7 +48,11 @@ function ControleGerencial() {
               xAxes: [{ display: true, ticks: { display: false } }]
             },
             responsive: true,
-            legend: { display: false }/*,
+            legend: { display: false },
+            title: {
+              display: true,
+              text: "Processos por tipo"
+            }/*,
             onClick: function (e) {
               var activePoints = myChart.getElementsAtEvent(e)
               var selectedIndex = activePoints[0]._index
@@ -54,15 +62,14 @@ function ControleGerencial() {
           plugins: [{
             afterDatasetsDraw: function (chart) {
               var ctx1 = chart.ctx;
-              console.log(chart)
               chart.data.datasets.forEach(function (dataset, i) {
                 var meta = chart.getDatasetMeta(i);
                 if (!meta.hidden) {
                   meta.data.forEach(function (element, index) {
                     // Draw the text in black, with the specified font
-                    ctx1.fillStyle = 'rgb(0, 0, 0)';
+                    ctx1.fillStyle = 'rgb(0, 0, 0, 0.6)';
 
-                    var fontSize = 16;
+                    var fontSize = 10;
                     var fontStyle = 'normal';
                     var fontFamily = 'Helvetica Neue';
                     ctx1.font = Chart.helpers.fontString(fontSize, fontStyle, fontFamily);
@@ -74,7 +81,7 @@ function ControleGerencial() {
                     ctx1.textAlign = 'center';
                     ctx1.textBaseline = 'middle';
 
-                    var padding = 5;
+                    var padding = 1;
                     var position = element.tooltipPosition();
                     ctx1.fillText(dataString, position.x, position.y - (fontSize / 2) - padding);
                   });
@@ -164,7 +171,6 @@ function ControleGerencial() {
         })
       ]);
     }).then(dados => { /** Carrega os dados extra dos processos */
-      console.log(dados);
       /** Atualiza os graficos */
       AtualizarGraficos();
       return dados[2].reduce(function (sequence, processo) {
@@ -199,6 +205,9 @@ function ControleGerencial() {
       //https://mottie.github.io/tablesorter/docs/example-empty-table.html
       $tabela.find("thead > tr > th").removeClass("sorter-false");
       $tabela.trigger("update");
+      $tabela.tablesorter().bind('updateComplete', function(e, table) {
+        AtualizarGraficos();
+      });
     }).catch(erro => {
       console.error(erro);
       $progressbar.progressbar("destroy");
@@ -227,6 +236,7 @@ function ControleGerencial() {
       });
 
       /** Processa os dados de marcador */
+      graficos.marcador.config.options.title.text = "Total de processos: " + dt.marcador.length
       dt.marcador = dt.marcador.reduce((acc, curr) => {
         var a = acc.find((e, i) => {
           var teste = e.nome == curr.nome
@@ -402,7 +412,6 @@ function ControleGerencial() {
             Fechar: function () { $dialog.dialog("close"); }
           },
           open: function () {
-            console.log(CgpAcoesPersonalizadas);
             var acao = {};
             if (CgpAcoesPersonalizadas[0] != undefined) {
               acao = CgpAcoesPersonalizadas[0];
@@ -441,7 +450,7 @@ function ControleGerencial() {
       $thead.append($throw);
 
       /** Cria a area de graficos */
-      var $graficos = $('<div id="divGraficos"><div class="divGrafBox"><p class="titleCenter"><b>Total ...</b></p><canvas id="chartMarcador"></canvas></div><div class="divGrafBox"><p class="titleCenter"><b>Processos por Tipo</b></p><canvas id="chartTipoProcesso"></canvas></div><div class="divGrafBox"><div class="toolbar"><button>Blocos de Assinaturas disponíveis</button><button>Blocos de reuniões disponíveis</button><button>Blocos internos disponíveis</button><button>Relatório de retorno programado</button></div></div></div>"');
+      var $graficos = $('<div id="divGraficos"><div class="divGrafBox"><canvas id="chartMarcador"></canvas></div><div class="divGrafBox"><canvas id="chartTipoProcesso"></canvas></div><div class="divGrafBox"><div class="toolbar"><button>Blocos de Assinaturas disponíveis</button><button>Blocos de reuniões disponíveis</button><button>Blocos internos disponíveis</button><button>Relatório de retorno programado</button></div></div></div>"');
 
       /** Aplica o tablesorter */
       $("#divInfraAreaDados").append($graficos, $comandos, $tabela);
@@ -702,7 +711,7 @@ function ControleGerencial() {
         .on("click", click_acao_acompanhamento);
 
       $acao_concluir.append($("<img/>").attr("src", "imagens/sei_concluir_processo.gif"))
-        .attr("idproc", DadosExtras.processo.numDoc)
+        .attr("idproc", DadosExtras.processo.Numero)
         .attr("title", "Concluir processo nesta unidade")
         .on("click", click_acao_concluir);
 
