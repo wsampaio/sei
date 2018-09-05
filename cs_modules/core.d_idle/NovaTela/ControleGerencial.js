@@ -168,6 +168,7 @@ function ControleGerencial() {
     }).then(dados => { /** Carrega os dados extra dos processos */
       /** Atualiza os graficos */
       AtualizarGraficos();
+      $tabela.trigger("update");
       return dados[2].reduce(function (sequence, processo) {
         return sequence.then(function () {
           if (processo.status.visualizado) {
@@ -653,8 +654,6 @@ function ControleGerencial() {
 
       /** FIM */
       $tbody.append($trrow);
-      /* Atualiza a tabela */
-      $tabela.trigger("update");
       return $trrow;
     }
     function AtualizarAcaoPersonalizada($tdacoes) {
@@ -777,7 +776,6 @@ function ControleGerencial() {
 
       /* Atualiza a tabela */
       $trrow.find("#tdprocesso #aguarde").hide()
-      $tabela.trigger("update");
     }
     /**
      *
