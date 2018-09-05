@@ -307,15 +307,21 @@ function ControleGerencial() {
         /** Filtra a tabela */
         var filters = $.tablesorter.getFilters($tabela);
         var param = ""
+        var Filtrar = false
         meta.data.forEach(e => {
           if (!e.hidden) {
             param = param + (param == "" ? "" : "|") + e._view.label + "="
+          } else {
+            Filtrar = true
           }
         });
 
-        filters[3] = param == "" ? "null" : param
-        console.log(param, filters)
-        $.tablesorter.setFilters($tabela, filters);
+        filters[3] = param == "" ? "null" : Filtrar ? param : ""
+        if (filters.reduce((p, c) => c == "" && p ? true : false, true)) {
+          $tabela.trigger('filterReset');
+        } else {
+          $.tablesorter.setFilters($tabela, filters);
+        }
       }
 
       /** Processa os dados de tipo de processo */
@@ -537,6 +543,8 @@ function ControleGerencial() {
       /** Ativa os graficos */
       graficos.marcador.chart = new Chart(document.getElementById('chartMarcador').getContext('2d'), graficos.marcador.config)
       graficos.tipoProcesso.chart = new Chart(document.getElementById('chartTipoProcesso').getContext('2d'), graficos.tipoProcesso.config)
+
+      $("#divGraficos div.toolbar > button").button({ disabled: true })
     }
 
     function TabelaPreencherLista(processo) {
