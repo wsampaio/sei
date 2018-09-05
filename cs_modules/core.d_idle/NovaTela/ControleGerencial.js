@@ -506,7 +506,7 @@ function ControleGerencial() {
       var $graficos = $('<div id="divGraficos"><div class="divGrafBox"><canvas id="chartMarcador"></canvas></div><div class="divGrafBox"><canvas id="chartTipoProcesso"></canvas></div><div class="divGrafBox"><div class="toolbar"><button>Blocos de Assinaturas disponíveis</button><button>Blocos de reuniões disponíveis</button><button>Blocos internos disponíveis</button><button>Relatório de retorno programado</button></div></div></div>"');
 
       /** Aplica o tablesorter */
-      $("#divInfraAreaDados").append($graficos, $comandos, $tabela);
+      $("#divInfraAreaDados").append($comandos, $graficos, $tabela);
       $tabela.tablesorter({
         theme: 'blue',
         headers: {
