@@ -381,8 +381,9 @@ function __Get_ControleDeProcessos(resp, paginar = true, idProcesso = null) {
 
         p.id = $trow.attr("id").substr(1);
         p.numDoc = $trow.find("td:nth-child(3) > a").text();
+        console.log(p.numDoc);
         p.linkHash = $trow.find("td:nth-child(3) > a").attr("href");
-        p.especificacao = /\'([^\,]*)\'/.exec($trow.find("td:nth-child(3) > a").attr("onmouseover"))[1];
+        p.especificacao = /\'([^\'][^\,][^\']*)\'/.exec($trow.find("td:nth-child(3) > a").attr("onmouseover"))[1];
         p.tipo = $trow.find("td:nth-child(5)").text();
         p.atribuido = $trow.find("td:nth-child(4) > a").text();
 
@@ -430,10 +431,14 @@ function __Get_ControleDeProcessos(resp, paginar = true, idProcesso = null) {
       }
 
       /* Se tiver paginação execulta a busca em todas as paginações */
-      if (paginar && $html.find("#selInfraPaginacaoSuperior > option").length > 0) {
-        var paginaAtual = $html.find("#selInfraPaginacaoSuperior > option[selected]").val();
+      if (paginar && $html.find("#divInfraAreaPaginacaoSuperior").children().length > 0) {
+        var paginaAtual = $html.find("#hdnInfraPaginaAtual").val();
         var $PaginacaoOption = $html.find("#selInfraPaginacaoSuperior > option");
         var arr = [];
+        if ($PaginacaoOption.length == 0) {
+          $PaginacaoOption = $("<option/><option/>");
+        }
+
         console.log("Total de páginas: " + $PaginacaoOption.length);
 
         $PaginacaoOption.each((i, opt) => {
