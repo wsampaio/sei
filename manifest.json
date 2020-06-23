@@ -147,6 +147,13 @@
 				"lib/jquery-3.2.1.min.js",
         "cs_modules/n_modulo/copia_detalhar_desempenho.js"
       ]
+    },
+    {
+      "matches": ["*://*.br/*controlador.php?acao=estatisticas_detalhar_unidade*"],
+      "js": [
+				"lib/jquery-3.2.1.min.js",
+        "cs_modules/n_modulo/copia_detalhar_unidade.js"
+      ]
     }
 		
 		
